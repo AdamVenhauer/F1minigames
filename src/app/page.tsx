@@ -24,7 +24,7 @@ interface GameCardProps {
 
 function GameSelectionCard({ title, description, icon, onClick }: GameCardProps) {
   return (
-    <Card 
+    <Card
       className="hover:shadow-primary/30 hover:border-primary cursor-pointer transition-all duration-300 ease-in-out transform hover:scale-105 bg-card/70 backdrop-blur-sm"
       onClick={onClick}
       role="button"
@@ -92,10 +92,10 @@ export default function HomePage() {
           Apex Start Arena
         </h1>
         <p className="text-xl md:text-2xl text-muted-foreground mt-2">Choose Your F1 Challenge!</p>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => setIsSettingsOpen(true)} 
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsSettingsOpen(true)}
           className="absolute top-0 right-0 md:top-2 md:right-2 shadow-md"
           aria-label="Open Settings"
         >
@@ -115,25 +115,25 @@ export default function HomePage() {
           icon={<Wrench className="w-10 h-10 text-accent" />}
           onClick={() => setSelectedGame('pitstop')}
         />
-        <GameSelectionCard 
+        <GameSelectionCard
           title="Gear Shift Precision"
           description="Time your shifts perfectly up the gearbox."
           icon={<Gauge className="w-10 h-10 text-accent" />}
           onClick={() => setSelectedGame('gearshift')}
         />
-        <GameSelectionCard 
+        <GameSelectionCard
           title="F1 Trivia Challenge"
           description="Test your Formula 1 knowledge."
           icon={<Brain className="w-10 h-10 text-accent" />}
           onClick={() => setSelectedGame('trivia')}
         />
-        <GameSelectionCard 
+        <GameSelectionCard
           title="Race Strategy"
           description="Make critical calls to win the race."
           icon={<Rocket className="w-10 h-10 text-accent" />}
           onClick={() => setSelectedGame('race_strategy')}
         />
-        <GameSelectionCard 
+        <GameSelectionCard
           title="Reflex Tiles"
           description="Hit the lit tiles as quickly as possible."
           icon={<LayoutGrid className="w-10 h-10 text-accent" />}
@@ -146,11 +146,11 @@ export default function HomePage() {
           --footer-height: 110px; /* Approximate height of your footer */
         }
         body {
-          background: 
+          background:
             linear-gradient(rgba(21, 23, 29, 0.75), rgba(21, 23, 29, 0.75)), /* Reduced overlay opacity */
             url('https://placehold.co/1920x1080.png') no-repeat center center fixed;
           background-size: cover;
-          /* data-ai-hint: race illustration */
+          /* data-ai-hint: f1 racing */
         }
       `}</style>
     </div>
