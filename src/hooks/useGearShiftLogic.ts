@@ -80,10 +80,12 @@ export function useGearShiftLogic() {
     ];
     if (!synth) return;
 
-    if (type === 'success' && synth instanceof Tone.Synth) synth.triggerAttackRelease("C5", "8n");
-    if (type === 'perfect' && synth instanceof Tone.Synth) synth.triggerAttackRelease("E5", "8n", Tone.now(), 0.8);
-    if (type === 'fail' && synth instanceof Tone.NoiseSynth) synth.triggerAttackRelease("2n");
-    if (type === 'complete' && synth instanceof Tone.PolySynth) synth.triggerAttackRelease(["C4", "E4", "G4"], "4n");
+    const time = Tone.now() + 0.01; // Add a small delay to prevent timing issues
+
+    if (type === 'success' && synth instanceof Tone.Synth) synth.triggerAttackRelease("C5", "8n", time);
+    if (type === 'perfect' && synth instanceof Tone.Synth) synth.triggerAttackRelease("E5", "8n", time, 0.8);
+    if (type === 'fail' && synth instanceof Tone.NoiseSynth) synth.triggerAttackRelease("2n", time);
+    if (type === 'complete' && synth instanceof Tone.PolySynth) synth.triggerAttackRelease(["C4", "E4", "G4"], "4n", time);
   }, []);
 
   const clearTimers = useCallback(() => {
@@ -102,26 +104,24 @@ export function useGearShiftLogic() {
         const nextRpm = prevRpm + RPM_INCREASE_PER_TICK;
         if (nextRpm >= 100) {
           clearInterval(rpmIntervalRef.current!);
-          // Auto-misfire if RPM hits 100 (engine blows!)
           const feedback: ShiftFeedback = { message: "Engine Over-Revved!", type: 'misfire_late', points: 0 };
           setShiftFeedback(feedback);
           playSound('fail');
           setGameState('misfire_late');
-          // No score penalty beyond 0 for the shift
           feedbackTimeoutRef.current = setTimeout(proceedToNextStepOrFinish, 1500);
           return 100;
         }
         return nextRpm;
       });
     }, RPM_TICK_INTERVAL);
-  }, [playSound, clearTimers]);
+  }, [playSound, clearTimers, /* Removed proceedToNextStepOrFinish from deps to avoid cycle if it changes frequently */]);
 
   const proceedToNextStepOrFinish = useCallback(() => {
-    setGameState(prevGameState => {
+    setGameState(prevGameState => { // Use functional update for gameState
       if (currentGear < MAX_GEARS) {
         setCurrentGear(g => g + 1);
-        startRevving();
-        return "revving"; // This will be set by startRevving
+        startRevving(); // This will set its own gameState to 'revving'
+        // No need to return a state here, startRevving handles it.
       } else {
         playSound('complete');
          const isTopScore = leaderboard.length < MAX_LEADERBOARD_ENTRIES || totalScore > 0 && (leaderboard.length === 0 || totalScore > leaderboard[leaderboard.length-1].time);
@@ -130,8 +130,10 @@ export function useGearShiftLogic() {
          }
         return "finished";
       }
+      // If not finished, the state will be managed by startRevving or handleShift
+      return prevGameState; // Default to previous state if no explicit change
     });
-  }, [currentGear, startRevving, playSound, totalScore, leaderboard]);
+  }, [currentGear, startRevving, playSound, totalScore, leaderboard]); // Removed setGameState from deps of startRevving or handleShift where possible
 
 
   const handleShift = useCallback(() => {
@@ -164,7 +166,7 @@ export function useGearShiftLogic() {
         setGameState("shifted_check");
     }
 
-    feedbackTimeoutRef.current = setTimeout(proceedToNextStepOrFinish, 1500); // Show feedback for 1.5s
+    feedbackTimeoutRef.current = setTimeout(proceedToNextStepOrFinish, 1500);
 
   }, [gameState, rpm, clearTimers, playSound, proceedToNextStepOrFinish]);
 
@@ -174,6 +176,7 @@ export function useGearShiftLogic() {
     setTotalScore(0);
     setShiftFeedback(null);
     setShowNicknameModal(false);
+    // setGameState will be called by startRevving
     startRevving();
   }, [clearTimers, startRevving]);
 
@@ -181,11 +184,11 @@ export function useGearShiftLogic() {
     const newScore: ScoreEntry = {
       id: Date.now().toString(),
       nickname,
-      time: totalScore, // Storing total score in 'time' field for leaderboard compatibility
+      time: totalScore, 
       date: new Date().toISOString(),
     };
     const updatedLeaderboard = [...leaderboard, newScore]
-      .sort((a, b) => b.time - a.time) // Sort descending for score
+      .sort((a, b) => b.time - a.time) 
       .slice(0, MAX_LEADERBOARD_ENTRIES);
     setLeaderboard(updatedLeaderboard);
     localStorage.setItem(GEAR_SHIFT_LEADERBOARD_KEY, JSON.stringify(updatedLeaderboard));
