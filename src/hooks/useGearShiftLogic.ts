@@ -33,7 +33,7 @@ interface ShiftFeedback {
 }
 
 export function useGearShiftLogic() {
-  const { isMuted } = useSound(); // Added
+  const { isMuted } = useSound(); 
   const [gameState, setGameState] = useState<GearShiftGameState>("idle");
   const gameStateRef = useRef(gameState); 
 
@@ -65,7 +65,7 @@ export function useGearShiftLogic() {
         shiftSuccess: new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.01, release: 0.1 }}).toDestination(),
         shiftPerfect: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.2, sustain: 0.05, release: 0.1 }}).toDestination(),
         shiftFail: new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.01, decay: 0.15, sustain: 0, release: 0.1 }}).toDestination(),
-        gameComplete: new Tone.PolySynth(Tone.Synth, { PolySynth: {volume: -6}, envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.2 }}).toDestination(),
+        gameComplete: new Tone.PolySynth(Tone.Synth, { volume: -6, envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.2 }}).toDestination(),
       };
     }
     const storedLeaderboard = localStorage.getItem(GEAR_SHIFT_LEADERBOARD_KEY);
@@ -87,12 +87,9 @@ export function useGearShiftLogic() {
   }, []);
 
   const playSound = useCallback((type: 'success' | 'perfect' | 'fail' | 'complete') => {
-    if (isMuted || !synthsRef.current) return; // Added isMuted check
+    if (isMuted || !synthsRef.current || Tone.context.state !== 'running') return;
 
     try {
-      if (Tone.context.state !== 'running') {
-          Tone.start().catch(e => console.warn("Tone.start failed:", e));
-      }
       const synth = synthsRef.current?.[type];
       if (!synth || (synth as any).disposed) return;
 
@@ -108,8 +105,8 @@ export function useGearShiftLogic() {
           break;
         case 'fail':
           if (synth instanceof Tone.NoiseSynth) {
-              synth.triggerRelease(now); // Stop any previous sound
-              synth.triggerAttackRelease("8n", now + 0.05); // Schedule new sound with delay
+              synth.triggerRelease(now); 
+              synth.triggerAttackRelease("8n", now + 0.05); 
           }
           break;
         case 'complete':
@@ -156,7 +153,7 @@ export function useGearShiftLogic() {
                   const nextRpm = prevRpm + RPM_INCREASE_PER_TICK;
                   if (nextRpm >= 100) {
                     if (rpmIntervalRef.current) clearInterval(rpmIntervalRef.current);
-                    if (gameStateRef.current === 'revving') { // Check state *before* setting new state
+                    if (gameStateRef.current === 'revving') { 
                       const feedback: ShiftFeedback = { message: "Engine Over-Revved!", type: 'misfire_late', points: 0 };
                       setShiftFeedback(feedback);
                       playSound('fail');
@@ -178,14 +175,19 @@ export function useGearShiftLogic() {
       if (currentActualGameState !== 'finished') {
           playSound('complete');
           setGameState("finished");
-          const currentTotalScore = totalScore; // Capture current score for leaderboard check
+          const currentTotalScore = totalScoreRef.current; // Use ref for checking score
           const isTopScore = leaderboard.length < MAX_LEADERBOARD_ENTRIES || (currentTotalScore > 0 && (leaderboard.length === 0 || currentTotalScore > (leaderboard[leaderboard.length-1]?.time ?? -1) ));
           if (isTopScore && currentTotalScore > 0) {
             setShowNicknameModal(true);
           }
       }
     }
-  }, [currentGear, leaderboard, totalScore, playSound, clearTimers]);
+  }, [currentGear, leaderboard, playSound, clearTimers]); // Removed totalScore, will use ref
+
+  const totalScoreRef = useRef(totalScore);
+  useEffect(() => {
+    totalScoreRef.current = totalScore;
+  }, [totalScore]);
 
 
   const startRevving = useCallback(() => {
@@ -205,7 +207,7 @@ export function useGearShiftLogic() {
 
       setRpm(prevRpm => {
         if (gameStateRef.current !== 'revving') return prevRpm;
-        if (prevRpm >= 100) return 100; // Guard: if already 100, interval should have been cleared
+        if (prevRpm >= 100) return 100; 
         
         const nextRpm = prevRpm + RPM_INCREASE_PER_TICK;
         if (nextRpm >= 100) {
@@ -272,7 +274,15 @@ export function useGearShiftLogic() {
 
   }, [rpm, clearTimers, playSound, proceedToNextStepOrFinish]);
 
-  const startGame = useCallback(() => {
+  const startGame = useCallback(async () => {
+    if (Tone.context.state !== 'running') {
+      try {
+        await Tone.start();
+        console.log("Tone.js started successfully in GearShift startGame");
+      } catch (e) {
+        console.warn("Tone.start() failed in GearShift startGame:", e);
+      }
+    }
     clearTimers();
     setCurrentGear(1);
     setTotalScore(0);
@@ -285,7 +295,7 @@ export function useGearShiftLogic() {
     const newScore: ScoreEntry = {
       id: Date.now().toString(),
       nickname,
-      time: totalScore, 
+      time: totalScoreRef.current, // Use ref for saving score
       date: new Date().toISOString(),
     };
     const updatedLeaderboard = [...leaderboard, newScore]
@@ -295,11 +305,8 @@ export function useGearShiftLogic() {
     localStorage.setItem(GEAR_SHIFT_LEADERBOARD_KEY, JSON.stringify(updatedLeaderboard));
     setShowNicknameModal(false);
     toast({ title: "Score Saved!", description: `Awesome driving, ${nickname}!` });
-  }, [totalScore, leaderboard, toast]);
+  }, [leaderboard, toast]);
   
-  useEffect(() => {
-  }, [playSound, clearTimers, proceedToNextStepOrFinish, startRevving]);
-
 
   return {
     gameState,
@@ -318,3 +325,4 @@ export function useGearShiftLogic() {
     OPTIMAL_RPM_MAX,
   };
 }
+
