@@ -38,10 +38,9 @@ export type RaceStrategyGameState =
 
 export interface PlayerRaceState {
   lap: number;
-  position: 1 | 2; // 1st or 2nd
+  position: number; // Player's current position (e.g., 1 for P1)
   tireWear: number; // 0-100, 0 is fresh, 100 is worn out
   playerTimeMs: number; // Player's cumulative time
-  rivalTimeMs: number; // Rival's cumulative time
   lastEventMessage: string | null; // Feedback from the last event
 }
 
