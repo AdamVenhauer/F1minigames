@@ -6,14 +6,14 @@ import { PitStopChallenge } from "@/components/game/PitStopChallenge";
 import { GearShiftChallenge } from "@/components/game/GearShiftChallenge";
 import { F1TriviaChallenge } from "@/components/game/F1TriviaChallenge";
 import { RaceStrategyChallenge } from "@/components/game/RaceStrategyChallenge";
-import { ReflexTilesChallenge } from "@/components/game/ReflexTilesChallenge"; // Added import
+import { ReflexTilesChallenge } from "@/components/game/ReflexTilesChallenge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Zap, Wrench, Gauge, Brain, Rocket, Settings, LayoutGrid } from 'lucide-react'; // Added LayoutGrid, Settings icon
+import { ArrowLeft, Zap, Wrench, Gauge, Brain, Rocket, Settings, LayoutGrid } from 'lucide-react';
 import { SettingsDialog } from '@/components/layout/SettingsDialog';
 import { Analytics } from "@vercel/analytics/next"
 
-type GameKey = 'menu' | 'reflex' | 'pitstop' | 'gearshift' | 'trivia' | 'race_strategy' | 'reflex_tiles'; // Added 'reflex_tiles'
+type GameKey = 'menu' | 'reflex' | 'pitstop' | 'gearshift' | 'trivia' | 'race_strategy' | 'reflex_tiles';
 
 interface GameCardProps {
   title: string;
@@ -61,7 +61,7 @@ export default function HomePage() {
         return <F1TriviaChallenge />;
       case 'race_strategy':
         return <RaceStrategyChallenge />;
-      case 'reflex_tiles': // Added case
+      case 'reflex_tiles':
         return <ReflexTilesChallenge />;
       default:
         return null;
@@ -102,7 +102,7 @@ export default function HomePage() {
           <Settings className="h-7 w-7 text-primary hover:text-primary/80" />
         </Button>
       </header>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 w-full max-w-4xl"> {/* Adjusted max-w and added lg:grid-cols-3 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 w-full max-w-4xl">
         <GameSelectionCard
           title="Reflex Test"
           description="Test your starting light reaction time."
@@ -136,7 +136,7 @@ export default function HomePage() {
         <GameSelectionCard 
           title="Reflex Tiles"
           description="Hit the lit tiles as quickly as possible."
-          icon={<LayoutGrid className="w-10 h-10 text-accent" />} // Added new card
+          icon={<LayoutGrid className="w-10 h-10 text-accent" />}
           onClick={() => setSelectedGame('reflex_tiles')}
         />
       </div>
@@ -148,12 +148,11 @@ export default function HomePage() {
         body {
           background: 
             linear-gradient(rgba(21, 23, 29, 0.9), rgba(21, 23, 29, 0.9)),
-            url('https://placehold.co/1920x1080/2a2f36/3a3f46.png?text=F1+Background') no-repeat center center fixed;
+            url('https://placehold.co/1920x1080.png') no-repeat center center fixed;
           background-size: cover;
-          /* data-ai-hint: abstract race track */
+          /* data-ai-hint: race illustration */
         }
       `}</style>
     </div>
   );
 }
-
