@@ -147,7 +147,7 @@ export default function HomePage() {
         }
         body {
           background: 
-            linear-gradient(rgba(21, 23, 29, 0.9), rgba(21, 23, 29, 0.9)),
+            linear-gradient(rgba(21, 23, 29, 0.75), rgba(21, 23, 29, 0.75)), /* Reduced overlay opacity */
             url('https://placehold.co/1920x1080.png') no-repeat center center fixed;
           background-size: cover;
           /* data-ai-hint: race illustration */
