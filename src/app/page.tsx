@@ -147,10 +147,10 @@ export default function HomePage() {
         }
         body {
           background:
-            linear-gradient(rgba(21, 23, 29, 0.75), rgba(21, 23, 29, 0.75)), /* Reduced overlay opacity */
+            linear-gradient(rgba(21, 23, 29, 0.70), rgba(21, 23, 29, 0.70)), /* Adjusted overlay opacity */
             url('https://placehold.co/1920x1080.png') no-repeat center center fixed;
           background-size: cover;
-          /* data-ai-hint: f1 racing */
+          /* data-ai-hint: f1 art */
         }
       `}</style>
     </div>
