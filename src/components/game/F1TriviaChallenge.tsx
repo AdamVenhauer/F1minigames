@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -31,7 +30,7 @@ export function F1TriviaChallenge() {
       return isAnswerCorrect ? "bg-green-500 hover:bg-green-600 border-green-700" : "bg-destructive hover:bg-destructive/90 border-red-700";
     }
     if (gameState === "answered" && option === currentQuestion?.correctAnswer) {
-      return "bg-green-500/70 border-green-600"; // Show correct answer if user was wrong
+      return "bg-green-500/70 border-green-600"; 
     }
     return "bg-secondary hover:bg-secondary/80";
   };
@@ -59,6 +58,7 @@ export function F1TriviaChallenge() {
             <div className="flex flex-col items-center space-y-4">
               <HelpCircle className="w-16 h-16 text-accent" />
               <p className="text-xl text-muted-foreground">Ready to test your F1 knowledge?</p>
+              <p className="text-sm text-muted-foreground">({totalQuestions > 0 ? totalQuestions : '10'} questions per game)</p>
               <Button onClick={startGame} size="lg" className="mt-4">
                 Start Trivia
               </Button>
@@ -92,7 +92,8 @@ export function F1TriviaChallenge() {
                     </div>
                   ) : (
                     <div className="flex items-center justify-center text-destructive">
-                      <XCircle className="mr-2 h-6 w-6" /> Incorrect.
+                      <XCircle className="mr-2 h-6 w-6" /> Incorrect. 
+                      {currentQuestion.correctAnswer && <span className="ml-1">The answer was: {currentQuestion.correctAnswer}</span>}
                     </div>
                   )}
                   {currentQuestion.explanation && (
@@ -119,7 +120,7 @@ export function F1TriviaChallenge() {
         isOpen={showNicknameModal}
         onClose={() => setShowNicknameModal(false)}
         onSubmitNickname={saveTriviaScore}
-        reactionTime={score} // Using reactionTime prop for score here
+        reactionTime={score} 
         scoreMessagePrefix="Your final score is "
         scoreUnit=" points"
       />
