@@ -103,12 +103,14 @@ export function GearShiftChallenge() {
           )}
         </CardContent>
       </Card>
-      <Leaderboard scores={leaderboard} />
+      <Leaderboard scores={leaderboard} scoreHeaderText="Score" />
       <NicknameModal
         isOpen={showNicknameModal}
         onClose={() => setShowNicknameModal(false)}
         onSubmitNickname={saveGearShiftScore}
         reactionTime={totalScore} // Using reactionTime prop for totalScore here
+        scoreMessagePrefix="Your final score is "
+        scoreUnit=" points"
       />
     </div>
   );

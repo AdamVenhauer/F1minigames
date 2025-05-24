@@ -17,7 +17,14 @@ const TRIVIA_QUESTIONS_SET: TriviaQuestion[] = [
   { id: 'q4', questionText: 'Which team has won the most F1 Constructors\' Championships as of end of 2023?', options: ['McLaren', 'Williams', 'Mercedes', 'Ferrari'], correctAnswer: 'Ferrari' },
   { id: 'q5', questionText: 'What is the home country of the Monza circuit, famously known as the "Temple of Speed"?', options: ['France', 'Germany', 'Italy', 'Spain'], correctAnswer: 'Italy' },
   { id: 'q6', questionText: 'Which F1 driver is known by the nickname "The Honey Badger"?', options: ['Max Verstappen', 'Daniel Ricciardo', 'Lando Norris', 'Charles Leclerc'], correctAnswer: 'Daniel Ricciardo' },
-  { id: 'q7', questionText: 'What is the maximum number of points a driver can score in a single F1 race weekend (including sprint race and fastest lap)?', options: ['25', '26', '33', '34'], correctAnswer: '34', explanation: '25 (win) + 1 (fastest lap) + 8 (sprint win) = 34 points.' },
+  { id: 'q7', questionText: 'What is the maximum number of points a driver can score in a single F1 race weekend (including sprint race and fastest lap, pre-2024 format)?', options: ['25', '26', '33', '34'], correctAnswer: '34', explanation: '25 (win) + 1 (fastest lap) + 8 (sprint win) = 34 points.' },
+  { id: 'q8', questionText: 'Which constructor won their first F1 race in 2020 at the Sakhir Grand Prix?', options: ['AlphaTauri', 'Racing Point', 'Haas', 'Alpine'], correctAnswer: 'Racing Point', explanation: 'Racing Point, now Aston Martin, won with Sergio Pérez.' },
+  { id: 'q9', questionText: 'What was the minimum weight limit for an F1 car (without fuel, with driver) for the 2023 season?', options: ['752 kg', '798 kg', '810 kg', '740 kg'], correctAnswer: '798 kg', explanation: 'The minimum weight limit was 798 kg for the 2023 F1 season.'},
+  { id: 'q10', questionText: 'Who was the first-ever Formula 1 World Champion?', options: ['Juan Manuel Fangio', 'Alberto Ascari', 'Giuseppe "Nino" Farina', 'Stirling Moss'], correctAnswer: 'Giuseppe "Nino" Farina', explanation: 'Nino Farina won the inaugural championship in 1950.' },
+  { id: 'q11', questionText: 'The "Senna S" is a famous corner sequence at which F1 circuit?', options: ['Silverstone', 'Spa-Francorchamps', 'Interlagos', 'Monaco'], correctAnswer: 'Interlagos', explanation: 'The Senna S is at the Autódromo José Carlos Pace (Interlagos) in Brazil.' },
+  { id: 'q12', questionText: 'What material are F1 car monocoques primarily made from for strength and lightness?', options: ['Titanium Alloy', 'Aluminum Honeycomb', 'Carbon Fibre Composite', 'Steel Spaceframe'], correctAnswer: 'Carbon Fibre Composite' },
+  { id: 'q13', questionText: 'How many teams typically competed in the Formula 1 season as of 2023-2024?', options: ['8', '10', '12', '11'], correctAnswer: '10' },
+  { id: 'q14', questionText: 'What color flag is waved to indicate the end of a race session?', options: ['Yellow Flag', 'Green Flag', 'Red Flag', 'Chequered Flag'], correctAnswer: 'Chequered Flag' },
 ];
 
 

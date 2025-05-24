@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, type FormEvent } from "react";
@@ -18,10 +19,19 @@ interface NicknameModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmitNickname: (nickname: string) => void;
-  reactionTime: number | null;
+  reactionTime: number | null; // Kept for score value, despite the name
+  scoreMessagePrefix?: string;
+  scoreUnit?: string;
 }
 
-export function NicknameModal({ isOpen, onClose, onSubmitNickname, reactionTime }: NicknameModalProps) {
+export function NicknameModal({ 
+  isOpen, 
+  onClose, 
+  onSubmitNickname, 
+  reactionTime, 
+  scoreMessagePrefix = "You got a reaction time of ", 
+  scoreUnit = "ms" 
+}: NicknameModalProps) {
   const [nickname, setNickname] = useState("");
 
   const handleSubmit = (e: FormEvent) => {
@@ -42,7 +52,7 @@ export function NicknameModal({ isOpen, onClose, onSubmitNickname, reactionTime 
             </div>
             <DialogTitle className="text-center text-2xl">New High Score!</DialogTitle>
             <DialogDescription className="text-center">
-              You got a reaction time of <span className="font-bold text-accent">{reactionTime}ms</span>!
+              {scoreMessagePrefix}<span className="font-bold text-accent">{reactionTime}</span>{scoreUnit && `${scoreUnit}`}!
               <br />
               Enter your nickname to save your score on the leaderboard.
             </DialogDescription>

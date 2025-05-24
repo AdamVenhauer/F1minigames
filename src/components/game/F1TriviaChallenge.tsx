@@ -120,6 +120,8 @@ export function F1TriviaChallenge() {
         onClose={() => setShowNicknameModal(false)}
         onSubmitNickname={saveTriviaScore}
         reactionTime={score} // Using reactionTime prop for score here
+        scoreMessagePrefix="Your final score is "
+        scoreUnit=" points"
       />
     </div>
   );
