@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Wrench, CheckCircle, XCircle, Clock, Zap, RotateCcw, Users, Fuel } from 'lucide-react';
-import { TireIcon } from '@/components/icons/TireIcon'; // Changed import
+import { TireIcon } from '@/components/icons/TireIcon';
 import * as Tone from 'tone';
 import type { ScoreEntry } from '@/lib/types'; // Assuming similar leaderboard structure
 import { useToast } from "@/hooks/use-toast";
@@ -239,3 +239,5 @@ export function PitStopChallenge() {
     </div>
   );
 }
+
+    
