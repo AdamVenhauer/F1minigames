@@ -1,10 +1,9 @@
-
+import { Analytics } from "@vercel/analytics/next";
 import type {Metadata} from 'next';
 import {Geist, Geist_Mono} from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { SoundProvider } from '@/context/SoundContext'; // Added import
-
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],

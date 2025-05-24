@@ -30,8 +30,8 @@ export type F1TriviaGameState =
 // Types for Race Strategy Challenge
 export type RaceStrategyGameState =
   | "idle"
-  | "qualifying_lap"      // New state for active qualifying
-  | "qualifying_result"   // New state to show qualifying outcome
+  | "qualifying_lap"
+  | "qualifying_result"
   | "countdown"
   | "event_active"
   | "lap_transition"
@@ -39,20 +39,20 @@ export type RaceStrategyGameState =
   | "finished";
 
 export interface PlayerRaceState {
-  lap: number; // Current lap in the main race
-  position: number; // Current race position, or starting position after qualifying
+  lap: number;
+  position: number;
   tireWear: number;
-  playerTimeMs: number; // Used for qualifying lap time, then reset for main race time
+  playerTimeMs: number;
   lastEventMessage: string | null;
-  qualifyingTimeMs: number | null; // Stores the completed qualifying lap time
-  startingPosition: number | null; // Stores the determined starting position for the race
+  qualifyingTimeMs: number | null;
+  startingPosition: number | null;
 }
 
 export interface RaceEvent {
   id: string;
-  lap: number; // For race events, can be 0 or 1 for qualifying events
-  type: "start_qte" | "overtake_qte" | "defend_qte" | "pit_decision" | "drs_qte" | "qte_generic" | "message_only" | "qualifying_qte"; // Added 'qualifying_qte'
-  event_subtype?: 'weather_drizzle' | 'mechanical_scare' | 'safety_car_restart' | 'yellow_flag' | 'component_warning' | 'blue_flags' | 'hot_lap_sector'; // Added 'hot_lap_sector' for qualifying
+  lap: number;
+  type: "start_qte" | "overtake_qte" | "defend_qte" | "pit_decision" | "drs_qte" | "qte_generic" | "message_only" | "qualifying_qte";
+  event_subtype?: 'weather_drizzle' | 'mechanical_scare' | 'safety_car_restart' | 'yellow_flag' | 'component_warning' | 'blue_flags' | 'hot_lap_sector' | 'tight_corners' | 'backmarker_traffic' | 'sudden_rain';
   description: string;
   qteDurationMs?: number;
   options?: string[];
@@ -60,4 +60,15 @@ export interface RaceEvent {
   failureMessage: string;
   actionText?: string;
 }
+
+// Types for Reflex Tiles Challenge
+export interface ReflexTile {
+  id: number;
+  isLit: boolean;
+}
+
+export type ReflexTilesGameState =
+  | "idle"
+  | "playing"
+  | "finished";
 
