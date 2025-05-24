@@ -89,23 +89,25 @@ export function useGearShiftLogic() {
     const synthConfig = synthsRef.current;
     if (!synthConfig) return;
 
-    const scheduleTime = Tone.now(); 
+    const now = Tone.now();
 
     switch (type) {
       case 'success':
-        if (synthConfig.shiftSuccess) synthConfig.shiftSuccess.triggerAttackRelease("C5", "8n", scheduleTime + 0.02);
+        if (synthConfig.shiftSuccess) synthConfig.shiftSuccess.triggerAttackRelease("C5", "8n", now + 0.02);
         break;
       case 'perfect':
-        if (synthConfig.shiftPerfect) synthConfig.shiftPerfect.triggerAttackRelease("E5", "8n", scheduleTime + 0.02, 0.8);
+        if (synthConfig.shiftPerfect) synthConfig.shiftPerfect.triggerAttackRelease("E5", "8n", now + 0.02, 0.8);
         break;
       case 'fail':
         if (synthConfig.shiftFail) {
-          // Removed synthConfig.shiftFail.stop(scheduleTime); 
-          synthConfig.shiftFail.triggerAttackRelease("8n", scheduleTime + 0.03); 
+            // Explicitly release any ongoing sound from this synth immediately
+            synthConfig.shiftFail.triggerRelease(now);
+            // Schedule the new attack and release with a clear future start time
+            synthConfig.shiftFail.triggerAttackRelease("8n", now + 0.05);
         }
         break;
       case 'complete':
-        if (synthConfig.gameComplete) synthConfig.gameComplete.triggerAttackRelease(["C4", "E4", "G4"], "4n", scheduleTime + 0.02);
+        if (synthConfig.gameComplete) synthConfig.gameComplete.triggerAttackRelease(["C4", "E4", "G4"], "4n", now + 0.02);
         break;
     }
   }, []);
