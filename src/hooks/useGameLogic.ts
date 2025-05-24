@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { ScoreEntry, GameState } from "@/lib/types";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import * as Tone from 'tone';
 
 const LEADERBOARD_KEY = "apexStartLeaderboard";
