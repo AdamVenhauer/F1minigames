@@ -48,7 +48,7 @@ export interface RaceEvent {
   id: string; 
   lap: number; 
   type: "start_qte" | "overtake_qte" | "defend_qte" | "pit_decision" | "drs_qte" | "qte_generic" | "message_only";
-  event_subtype?: 'weather_drizzle' | 'mechanical_scare' | 'safety_car_restart'; // For qte_generic
+  event_subtype?: 'weather_drizzle' | 'mechanical_scare' | 'safety_car_restart' | 'yellow_flag' | 'component_warning' | 'blue_flags'; // For qte_generic
   description: string; 
   qteDurationMs?: number; 
   options?: string[]; 
