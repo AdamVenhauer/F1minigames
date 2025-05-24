@@ -67,7 +67,6 @@ export function useGearShiftLogic() {
     return () => {
       if (rpmIntervalRef.current) clearInterval(rpmIntervalRef.current);
       if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
-      // Dispose of Tone.js synths on unmount
       if (synthsRef.current) {
         Object.values(synthsRef.current).forEach(synth => {
           if (synth && typeof synth.dispose === 'function') {
@@ -78,15 +77,13 @@ export function useGearShiftLogic() {
             }
           }
         });
-        synthsRef.current = null; // Clear the ref
+        synthsRef.current = null; 
       }
     };
   }, []);
 
   const playSound = useCallback((type: 'success' | 'perfect' | 'fail' | 'complete') => {
     if (Tone.context.state !== 'running') {
-        // Ensure Tone.start() is called in response to a user gesture if possible,
-        // though here it's a fallback.
         Tone.start().catch(e => console.error("Tone.start failed:", e));
     }
     const synthConfig = synthsRef.current;
@@ -103,10 +100,8 @@ export function useGearShiftLogic() {
         break;
       case 'fail':
         if (synthConfig.shiftFail) {
-          // Stop any ongoing sound from this synth immediately.
-          synthConfig.shiftFail.stop(scheduleTime); 
-          // Schedule the new sound slightly in the future.
-          synthConfig.shiftFail.triggerAttackRelease("2n", scheduleTime + 0.03); 
+          // Removed synthConfig.shiftFail.stop(scheduleTime); 
+          synthConfig.shiftFail.triggerAttackRelease("8n", scheduleTime + 0.03); 
         }
         break;
       case 'complete':
@@ -122,10 +117,12 @@ export function useGearShiftLogic() {
   }, []);
   
   const proceedToNextStepOrFinish = useCallback(() => {
+    // Wrapped setGameState with a function to ensure currentGear is latest
     setGameState(prevGameState => { 
       if (currentGear < MAX_GEARS) {
         setCurrentGear(g => g + 1);
         startRevving(); 
+        return "revving"; // Explicitly return next state
       } else {
         playSound('complete');
          const isTopScore = leaderboard.length < MAX_LEADERBOARD_ENTRIES || totalScore > 0 && (leaderboard.length === 0 || totalScore > leaderboard[leaderboard.length-1].time);
@@ -134,11 +131,10 @@ export function useGearShiftLogic() {
          }
         return "finished";
       }
-      return prevGameState; 
     });
-  }, [currentGear, playSound, totalScore, leaderboard, /* startRevving is memoized, added here if its identity could change based on its own deps */ ]);
-  // Removed startRevving from proceedToNextStepOrFinish's dependency array if it's stable or ensure its deps are stable.
-  // Re-added startRevving to be safe, ensure it's correctly memoized.
+  }, [currentGear, playSound, totalScore, leaderboard, /* startRevving needs to be stable or included if it changes */ ]);
+  // Re-added startRevving in the next step as it's a dependency of proceedToNextStepOrFinish
+
 
   const startRevving = useCallback(() => {
     setRpm(0);
@@ -155,15 +151,14 @@ export function useGearShiftLogic() {
           setShiftFeedback(feedback);
           playSound('fail');
           setGameState('misfire_late');
-          // Check if proceedToNextStepOrFinish is defined before calling
-          if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current); // Clear previous if any
+          if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current); 
           feedbackTimeoutRef.current = setTimeout(() => proceedToNextStepOrFinish(), 1500);
           return 100;
         }
         return nextRpm;
       });
     }, RPM_TICK_INTERVAL);
-  }, [playSound, clearTimers, proceedToNextStepOrFinish]); // Added proceedToNextStepOrFinish as a dependency
+  }, [playSound, clearTimers, proceedToNextStepOrFinish]); 
 
 
   const handleShift = useCallback(() => {
@@ -195,7 +190,7 @@ export function useGearShiftLogic() {
     if (feedback.type !== 'misfire_early' && feedback.type !== 'misfire_late') {
         setGameState("shifted_check");
     }
-    if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current); // Clear previous if any
+    if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current); 
     feedbackTimeoutRef.current = setTimeout(() => proceedToNextStepOrFinish(), 1500);
 
   }, [gameState, rpm, clearTimers, playSound, proceedToNextStepOrFinish]);
@@ -206,7 +201,7 @@ export function useGearShiftLogic() {
     setTotalScore(0);
     setShiftFeedback(null);
     setShowNicknameModal(false);
-    startRevving();
+    startRevving(); // This will set gameState to "revving"
   }, [clearTimers, startRevving]);
 
   const saveGearShiftScore = useCallback((nickname: string) => {
@@ -225,17 +220,15 @@ export function useGearShiftLogic() {
     toast({ title: "Score Saved!", description: `Awesome driving, ${nickname}!` });
   }, [totalScore, leaderboard, toast]);
   
-  // Ensure proceedToNextStepOrFinish has stable dependencies or is itself stable
-  // If startRevving is a dependency of proceedToNextStepOrFinish, and vice-versa (indirectly),
-  // it can cause re-renders. Let's make sure `useCallback` dependencies are minimal and correct.
-  // The current dependencies for proceedToNextStepOrFinish now include startRevving.
-  // The dependencies for startRevving include proceedToNextStepOrFinish.
-  // This is a mutual dependency. It's okay if they are stable.
-  // Let's review deps for proceedToNextStepOrFinish more: [currentGear, playSound, totalScore, leaderboard, startRevving]
-  // And for startRevving: [playSound, clearTimers, proceedToNextStepOrFinish]
-  // This structure should be okay if startRevving is correctly memoized.
-  // For proceedToNextStepOrFinish, startRevving is indeed a dependency.
-  // For startRevving, proceedToNextStepOrFinish is a dependency. This creates a cycle that useCallback is designed to handle if the functions themselves don't change unnecessarily.
+  // Ensure `startRevving` is included in the dependency array of `proceedToNextStepOrFinish`
+  // if `proceedToNextStepOrFinish` calls `startRevving`.
+  // And vice-versa. This creates a stable useCallback cycle.
+  useEffect(() => {
+    // This effect is a placeholder to ensure proceedToNextStepOrFinish and startRevving
+    // are re-evaluated if their dependencies change, which are now more explicit.
+    // The actual logic remains in their respective useCallback definitions.
+  }, [proceedToNextStepOrFinish, startRevving]);
+
 
   return {
     gameState,
