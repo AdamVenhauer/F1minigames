@@ -4,12 +4,13 @@ import { useState, type ReactNode } from 'react';
 import { GameInterface } from "@/components/game/GameInterface";
 import { PitStopChallenge } from "@/components/game/PitStopChallenge";
 import { GearShiftChallenge } from "@/components/game/GearShiftChallenge";
-import { F1TriviaChallenge } from "@/components/game/F1TriviaChallenge"; // Added import
+import { F1TriviaChallenge } from "@/components/game/F1TriviaChallenge";
+import { RaceStrategyChallenge } from "@/components/game/RaceStrategyChallenge"; // Added import
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Zap, Wrench, Gauge, Brain } from 'lucide-react'; // Added Brain icon
+import { ArrowLeft, Zap, Wrench, Gauge, Brain, Rocket } from 'lucide-react'; // Added Rocket icon
 
-type GameKey = 'menu' | 'reflex' | 'pitstop' | 'gearshift' | 'trivia'; // Added 'trivia'
+type GameKey = 'menu' | 'reflex' | 'pitstop' | 'gearshift' | 'trivia' | 'race_strategy'; // Added 'race_strategy'
 
 interface GameCardProps {
   title: string;
@@ -52,8 +53,10 @@ export default function HomePage() {
         return <PitStopChallenge />;
       case 'gearshift':
         return <GearShiftChallenge />;
-      case 'trivia': // Added case for F1TriviaChallenge
+      case 'trivia':
         return <F1TriviaChallenge />;
+      case 'race_strategy': // Added case for RaceStrategyChallenge
+        return <RaceStrategyChallenge />;
       default:
         return null;
     }
@@ -102,6 +105,12 @@ export default function HomePage() {
           description="Test your Formula 1 knowledge."
           icon={<Brain className="w-10 h-10 text-accent" />}
           onClick={() => setSelectedGame('trivia')}
+        />
+        <GameSelectionCard 
+          title="Race Strategy"
+          description="Make critical calls to win the race."
+          icon={<Rocket className="w-10 h-10 text-accent" />}
+          onClick={() => setSelectedGame('race_strategy')}
         />
       </div>
       <style jsx global>{`
