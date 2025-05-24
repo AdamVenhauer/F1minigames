@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useGameLogic } from "@/hooks/useGameLogic";
@@ -25,12 +26,12 @@ export function GameInterface() {
 
   const getButtonText = () => {
     if (gameState === "idle" || gameState === "result" || gameState === "jumpStart") {
-      return "Start Game";
+      return "Start Reflex Test";
     }
     if (gameState === "lightsSequence" || gameState === "greenLight") {
       return "Click Now!";
     }
-    return "Start Game";
+    return "Start Reflex Test";
   };
 
   const getButtonIcon = () => {
@@ -65,7 +66,7 @@ export function GameInterface() {
     if (gameState === "greenLight") {
       return <div className="text-2xl text-green-400 font-bold animate-ping">GO!</div>;
     }
-    return <div className="text-lg text-muted-foreground">Click "Start Game" to test your reflexes!</div>;
+    return <div className="text-lg text-muted-foreground">Click "Start Reflex Test" to test your reflexes!</div>;
   };
 
   const mainButtonAction = () => {
@@ -77,17 +78,11 @@ export function GameInterface() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
-      <header className="mb-8">
-        <h1 className="text-5xl font-extrabold tracking-tight text-primary">
-          Apex Start
-        </h1>
-        <p className="text-xl text-muted-foreground">F1 Reflex Test</p>
-      </header>
-
+    <div className="flex flex-col items-center text-center">
       <Card className="w-full max-w-lg mb-8 shadow-2xl bg-card/80 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="text-center text-2xl">Reaction Zone</CardTitle>
+          <CardTitle className="text-center text-2xl">Reflex Test Zone</CardTitle>
+          <CardDescription>Focus on the lights!</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center space-y-6">
           <StartLights gameState={gameState} activeRedLights={activeRedLights} />
@@ -101,7 +96,7 @@ export function GameInterface() {
             size="lg"
             className="w-full max-w-xs text-lg py-6 rounded-lg shadow-lg transition-transform hover:scale-105 focus:ring-4 focus:ring-accent/50"
             variant={gameState === "greenLight" ? "default" : "secondary"}
-            disabled={gameState === "lightsSequence" && activeRedLights < 5} // Disable click until all red lights are on at least
+            disabled={gameState === "lightsSequence" && activeRedLights < 5}
             aria-label={getButtonText()}
           >
             {getButtonIcon()}
@@ -131,10 +126,6 @@ export function GameInterface() {
         onSubmitNickname={saveScore}
         reactionTime={reactionTime}
       />
-       <footer className="mt-12 text-sm text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} Apex Start. All rights reserved.</p>
-        <p>Inspired by the thrill of Formula 1.</p>
-      </footer>
     </div>
   );
 }

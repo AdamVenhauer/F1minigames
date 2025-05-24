@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Apex Start - F1 Reflex Test',
-  description: 'Test your reflexes with this F1-themed game!',
+  title: 'Apex Start - F1 Mini Games',
+  description: 'Test your F1 skills with multiple mini-games!',
 };
 
 export default function RootLayout({
@@ -26,8 +26,16 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
-        {children}
-        <Toaster />
+        <div className="flex flex-col min-h-screen">
+          <main className="flex-grow">
+            {children}
+          </main>
+          <Toaster />
+          <footer className="py-6 px-4 text-center text-sm text-muted-foreground border-t">
+            <p>&copy; {new Date().getFullYear()} Apex Start. All rights reserved.</p>
+            <p>Inspired by the thrill of Formula 1.</p>
+          </footer>
+        </div>
       </body>
     </html>
   );
