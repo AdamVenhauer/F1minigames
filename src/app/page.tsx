@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Zap, Wrench, Gauge, Brain, Rocket, Settings } from 'lucide-react'; // Added Settings icon
 import { SettingsDialog } from '@/components/layout/SettingsDialog'; // Added import
-
+import { Analytics } from "@vercel/analytics/next"
 type GameKey = 'menu' | 'reflex' | 'pitstop' | 'gearshift' | 'trivia' | 'race_strategy';
 
 interface GameCardProps {
