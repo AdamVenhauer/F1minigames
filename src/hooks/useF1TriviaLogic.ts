@@ -1,9 +1,11 @@
+
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { ScoreEntry, TriviaQuestion, F1TriviaGameState } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import * as Tone from 'tone';
+import { useSound } from "@/context/SoundContext"; // Added import
 
 const F1_TRIVIA_LEADERBOARD_KEY = "apexF1TriviaLeaderboard";
 const MAX_LEADERBOARD_ENTRIES = 10;
@@ -70,6 +72,7 @@ const TRIVIA_QUESTIONS_SET: TriviaQuestion[] = [
 
 
 export function useF1TriviaLogic() {
+  const { isMuted } = useSound(); // Added
   const [gameState, setGameState] = useState<F1TriviaGameState>("idle");
   const [questions, setQuestions] = useState<TriviaQuestion[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<TriviaQuestion | null>(null);
@@ -103,21 +106,35 @@ export function useF1TriviaLogic() {
     return () => {
       if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
       if (synthsRef.current) {
-        Object.values(synthsRef.current).forEach(synth => synth?.dispose());
+        Object.values(synthsRef.current).forEach(synth => {
+           if (synth && !(synth as any).disposed) {
+              try { synth.dispose(); } catch (e) { /* ignore */ }
+            }
+        });
         synthsRef.current = null;
       }
     };
   }, []);
   
   const playSound = useCallback((type: 'correct' | 'incorrect' | 'complete') => {
-    if (Tone.context.state !== 'running') Tone.start().catch(e => console.error("Tone.start failed:", e));
-    const synth = synthsRef.current?.[type];
-    if (!synth) return;
-    const now = Tone.now();
-    if (type === 'correct' && synth instanceof Tone.Synth) synth.triggerAttackRelease("C5", "8n", now + 0.02);
-    else if (type === 'incorrect' && synth instanceof Tone.NoiseSynth) synth.triggerAttackRelease("2n", now + 0.03);
-    else if (type === 'complete' && synth instanceof Tone.PolySynth) synth.triggerAttackRelease(["C4", "E4", "G4"], "4n", now + 0.02);
-  }, []);
+    if (isMuted || !synthsRef.current) return; // Added isMuted check
+
+    try {
+      if (Tone.context.state !== 'running') Tone.start().catch(e => console.warn("Tone.start failed:", e));
+      const synth = synthsRef.current?.[type];
+      
+      if (synth && !(synth as any).disposed) {
+        const now = Tone.now();
+        if (type === 'correct' && synth instanceof Tone.Synth) synth.triggerAttackRelease("C5", "8n", now + 0.02);
+        else if (type === 'incorrect' && synth instanceof Tone.NoiseSynth) {
+            synth.triggerRelease(now); // Attempt to stop if already playing
+            synth.triggerAttackRelease("2n", now + 0.05); // Play with a slight delay
+        } else if (type === 'complete' && synth instanceof Tone.PolySynth) synth.triggerAttackRelease(["C4", "E4", "G4"], "4n", now + 0.02);
+      }
+    } catch (e) {
+      console.error(`Error playing sound (${type}):`, e);
+    }
+  }, [isMuted]);
 
   const shuffleArray = <T,>(array: T[]): T[] => {
     const newArray = [...array];
@@ -137,7 +154,7 @@ export function useF1TriviaLogic() {
     } else {
       setGameState("finished");
       playSound('complete');
-      const isTopScore = score > 0 && (leaderboard.length < MAX_LEADERBOARD_ENTRIES || score > leaderboard[leaderboard.length - 1].time);
+      const isTopScore = score > 0 && (leaderboard.length < MAX_LEADERBOARD_ENTRIES || score > (leaderboard[leaderboard.length - 1]?.time ?? -1) );
       if (isTopScore) {
         setShowNicknameModal(true);
       }
@@ -175,8 +192,8 @@ export function useF1TriviaLogic() {
     feedbackTimeoutRef.current = setTimeout(() => {
       const nextIndex = currentQuestionIndex + 1;
       setCurrentQuestionIndex(nextIndex);
-      loadQuestion(nextIndex, questions); // Pass the current set of game questions
-    }, currentQuestion.explanation || !correct ? 3000 : 1500); // Longer delay if explanation or incorrect
+      loadQuestion(nextIndex, questions);
+    }, currentQuestion.explanation || !correct ? 3000 : 1500);
 
   }, [gameState, currentQuestion, currentQuestionIndex, playSound, loadQuestion, questions]);
   
@@ -197,7 +214,7 @@ export function useF1TriviaLogic() {
     toast({ title: "Score Saved!", description: `Great F1 knowledge, ${nickname}!` });
   }, [score, leaderboard, toast]);
 
-  const totalQuestionsInGame = questions.length; // This will now be 10 (or less if total pool is smaller)
+  const totalQuestionsInGame = questions.length > 0 ? questions.length : QUESTIONS_PER_GAME;
 
   return {
     gameState,

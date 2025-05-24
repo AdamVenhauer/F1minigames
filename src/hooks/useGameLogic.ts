@@ -1,9 +1,11 @@
+
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { ScoreEntry, GameState } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import * as Tone from 'tone';
+import { useSound } from "@/context/SoundContext"; // Added import
 
 const LEADERBOARD_KEY = "apexStartLeaderboard";
 const MAX_LEADERBOARD_ENTRIES = 10;
@@ -12,6 +14,7 @@ const MIN_GREEN_LIGHT_DELAY = 1000; // ms
 const MAX_GREEN_LIGHT_DELAY = 4000; // ms
 
 export function useGameLogic() {
+  const { isMuted } = useSound(); // Added
   const [gameState, setGameState] = useState<GameState>("idle");
   const [activeRedLights, setActiveRedLights] = useState(0);
   const [reactionTime, setReactionTime] = useState<number | null>(null);
@@ -23,7 +26,6 @@ export function useGameLogic() {
   const lightSequenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const greenLightTimerRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Tone.js synths - ensure they are only created once
   const synthsRef = useRef<{
     countdown?: Tone.Synth,
     go?: Tone.Synth,
@@ -32,7 +34,6 @@ export function useGameLogic() {
   } | null>(null);
 
   useEffect(() => {
-    // Initialize Tone.js synths on component mount (client-side only)
     if (typeof window !== 'undefined' && !synthsRef.current) {
       synthsRef.current = {
         countdown: new Tone.Synth({
@@ -56,32 +57,50 @@ export function useGameLogic() {
       };
     }
 
-    // Load leaderboard from localStorage
     const storedLeaderboard = localStorage.getItem(LEADERBOARD_KEY);
     if (storedLeaderboard) {
       setLeaderboard(JSON.parse(storedLeaderboard));
     }
     
-    return () => { // Cleanup timeouts on unmount
+    return () => {
         if (lightSequenceTimerRef.current) clearTimeout(lightSequenceTimerRef.current);
         if (greenLightTimerRef.current) clearTimeout(greenLightTimerRef.current);
+        // Dispose synths on cleanup
+        if (synthsRef.current) {
+          Object.values(synthsRef.current).forEach(synth => {
+            if (synth && !(synth as any).disposed) {
+              try { synth.dispose(); } catch (e) { /* ignore */ }
+            }
+          });
+          synthsRef.current = null;
+        }
     };
   }, []);
 
   const playSound = useCallback((soundType: 'countdown' | 'go' | 'penalty' | 'success') => {
-    if (Tone.context.state !== 'running') {
-      Tone.start(); // Ensure AudioContext is running
+    if (isMuted || !synthsRef.current) return; // Added isMuted check
+
+    try {
+      if (Tone.context.state !== 'running') {
+        Tone.start().catch(e => console.warn("Tone.start failed:", e));
+      }
+      const synth = synthsRef.current?.[soundType];
+      if (synth && !(synth as any).disposed) {
+          switch(soundType) {
+              case 'countdown': synth.triggerAttackRelease("C5", "8n", Tone.now() + 0.01); break;
+              case 'go': synth.triggerAttackRelease("G5", "4n", Tone.now() + 0.01); break;
+              case 'penalty': synth.triggerAttackRelease("A2", "4n", Tone.now() + 0.01); break;
+              case 'success': 
+                (synth as Tone.MonoSynth).triggerAttackRelease("E4", "8n", Tone.now() + 0.01);
+                (synth as Tone.MonoSynth).triggerAttackRelease("G4", "8n", Tone.now() + 0.11);
+                (synth as Tone.MonoSynth).triggerAttackRelease("C5", "8n", Tone.now() + 0.21);
+                break;
+          }
+      }
+    } catch (e) {
+      console.error(`Error playing sound (${soundType}):`, e);
     }
-    const synth = synthsRef.current?.[soundType];
-    if (synth) {
-        switch(soundType) {
-            case 'countdown': synth.triggerAttackRelease("C5", "8n"); break;
-            case 'go': synth.triggerAttackRelease("G5", "4n"); break;
-            case 'penalty': synth.triggerAttackRelease("A2", "4n"); break;
-            case 'success': synth.triggerAttackRelease("E4", "8n", Tone.now()); synth.triggerAttackRelease("G4", "8n", Tone.now() + 0.1); synth.triggerAttackRelease("C5", "8n", Tone.now() + 0.2); break;
-        }
-    }
-  }, []);
+  }, [isMuted]);
 
 
   const clearTimers = useCallback(() => {
@@ -109,17 +128,16 @@ export function useGameLogic() {
         playSound('countdown');
         lightSequenceTimerRef.current = setTimeout(advanceLights, LIGHT_INTERVAL);
       } else {
-        // All 5 red lights are on, wait for random delay then green light
         const delay = Math.random() * (MAX_GREEN_LIGHT_DELAY - MIN_GREEN_LIGHT_DELAY) + MIN_GREEN_LIGHT_DELAY;
         greenLightTimerRef.current = setTimeout(() => {
-          setActiveRedLights(0); // Turn off red lights
+          setActiveRedLights(0); 
           setGameState("greenLight");
           playSound('go');
           startTimeRef.current = performance.now();
         }, delay);
       }
     };
-    lightSequenceTimerRef.current = setTimeout(advanceLights, LIGHT_INTERVAL); // Start sequence after a brief delay
+    lightSequenceTimerRef.current = setTimeout(advanceLights, LIGHT_INTERVAL);
   }, [resetGame, playSound]);
 
   const handleGameClick = useCallback(() => {

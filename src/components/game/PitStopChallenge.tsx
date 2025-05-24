@@ -12,6 +12,7 @@ import type { ScoreEntry } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { NicknameModal } from "./NicknameModal";
 import { Leaderboard } from "./Leaderboard";
+import { useSound } from "@/context/SoundContext"; // Added import
 
 
 type PitStopStepKey = 'idle' | 'ready' | 'jack_up' | 'tires_off' | 'tires_on' | 'fueling' | 'jack_down' | 'go' | 'finished' | 'failed';
@@ -32,7 +33,7 @@ const PIT_STOP_STEPS: Record<PitStopStepKey, PitStopStep> = {
   jack_up: { key: 'jack_up', label: 'Jack Up Car!', actionText: 'Jack UP!', icon: <Zap className="w-8 h-8 text-yellow-400" />, durationMs: 0, next: 'tires_off', fail: 'failed' },
   tires_off: { key: 'tires_off', label: 'Tires Off!', actionText: 'Remove Tires!', icon: <TireIcon className="w-8 h-8 text-red-500" />, durationMs: 0, next: 'tires_on', fail: 'failed' },
   tires_on: { key: 'tires_on', label: 'Tires On!', actionText: 'Attach Tires!', icon: <TireIcon className="w-8 h-8 text-green-500" />, durationMs: 0, next: 'fueling', fail: 'failed' },
-  fueling: { key: 'fueling', label: 'Fueling!', actionText: 'Start Fueling', icon: <Fuel className="w-8 h-8 text-orange-400" />, durationMs: 2000, next: 'jack_down', fail: 'failed' }, // Fueling is timed
+  fueling: { key: 'fueling', label: 'Fueling!', actionText: 'Start Fueling', icon: <Fuel className="w-8 h-8 text-orange-400" />, durationMs: 2000, next: 'jack_down', fail: 'failed' },
   jack_down: { key: 'jack_down', label: 'Jack Down Car!', actionText: 'Jack DOWN!', icon: <Zap className="w-8 h-8 text-yellow-400" />, durationMs: 0, next: 'go', fail: 'failed' },
   go: { key: 'go', label: 'GO GO GO!', actionText: 'Release Car!', icon: <CheckCircle className="w-8 h-8 text-green-400" />, durationMs: 0, next: 'finished', fail: 'failed' },
   finished: { key: 'finished', label: 'Pit Stop Complete!', actionText: 'Try Again', icon: <CheckCircle className="w-10 h-10 text-green-500" />, durationMs: 0, next: 'idle' },
@@ -41,9 +42,10 @@ const PIT_STOP_STEPS: Record<PitStopStepKey, PitStopStep> = {
 
 const PIT_LEADERBOARD_KEY = "apexPitStopLeaderboard";
 const MAX_PIT_LEADERBOARD_ENTRIES = 10;
-const ACTION_COOLDOWN_MS = 150; // Brief cooldown to prevent spamming
+const ACTION_COOLDOWN_MS = 150;
 
 export function PitStopChallenge() {
+  const { isMuted } = useSound(); // Added
   const [currentStepKey, setCurrentStepKey] = useState<PitStopStepKey>('idle');
   const [totalPitTime, setTotalPitTime] = useState<number | null>(null);
   const [stepStartTime, setStepStartTime] = useState<number | null>(null);
@@ -51,12 +53,12 @@ export function PitStopChallenge() {
   const [progress, setProgress] = useState(0);
   const [showNicknameModal, setShowNicknameModal] = useState(false);
   const [leaderboard, setLeaderboard] = useState<ScoreEntry[]>([]);
-  const [isActionLocked, setIsActionLocked] = useState(false); // For anti-spam
+  const [isActionLocked, setIsActionLocked] = useState(false);
   const { toast } = useToast();
 
   const stepTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const actionLockTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const synthsRef = useRef<{ click?: Tone.Synth, success?: Tone.Synth, error?: Tone.Synth, complete?: Tone.Synth } | null>(null);
+  const synthsRef = useRef<{ click?: Tone.Synth, success?: Tone.Synth, error?: Tone.Synth, complete?: Tone.PolySynth } | null>(null);
   
   useEffect(() => {
     if (typeof window !== 'undefined' && !synthsRef.current) {
@@ -75,22 +77,38 @@ export function PitStopChallenge() {
       if (stepTimeoutRef.current) clearTimeout(stepTimeoutRef.current);
       if (actionLockTimeoutRef.current) clearTimeout(actionLockTimeoutRef.current);
       if (synthsRef.current) {
-        Object.values(synthsRef.current).forEach(synth => synth?.dispose());
+        Object.values(synthsRef.current).forEach(synth => {
+           if (synth && !(synth as any).disposed) {
+              try { synth.dispose(); } catch (e) { /* ignore */ }
+            }
+        });
         synthsRef.current = null;
       }
     };
   }, []);
 
   const playSound = useCallback((type: 'click' | 'success' | 'error' | 'complete') => {
-    if (Tone.context.state !== 'running') Tone.start().catch(e => console.error("Tone.start failed:", e));
-    const synth = synthsRef.current?.[type];
-    if (!synth) return;
-    const now = Tone.now();
-    if (type === 'click' && synth instanceof Tone.MembraneSynth) synth.triggerAttackRelease("C2", "8n", now + 0.01);
-    if (type === 'success' && synth instanceof Tone.Synth) synth.triggerAttackRelease("C5", "8n", now + 0.02);
-    if (type === 'error' && synth instanceof Tone.NoiseSynth) synth.triggerAttackRelease("2n", now + 0.03);
-    if (type === 'complete' && synth instanceof Tone.PolySynth) synth.triggerAttackRelease(["C4", "E4", "G4"], "4n", now + 0.02);
-  }, []);
+    if (isMuted || !synthsRef.current) return; // Added isMuted check
+    
+    try {
+      if (Tone.context.state !== 'running') Tone.start().catch(e => console.warn("Tone.start failed:", e));
+      const synth = synthsRef.current?.[type];
+      if (!synth || (synth as any).disposed) return;
+
+      const now = Tone.now();
+      const scheduleTime = now + 0.02;
+
+      if (type === 'click' && synth instanceof Tone.MembraneSynth) synth.triggerAttackRelease("C2", "8n", scheduleTime);
+      else if (type === 'success' && synth instanceof Tone.Synth) synth.triggerAttackRelease("C5", "8n", scheduleTime);
+      else if (type === 'error' && synth instanceof Tone.NoiseSynth) {
+          synth.triggerRelease(now); // Stop any previous sound
+          synth.triggerAttackRelease("2n", now + 0.05); // Schedule new sound with delay
+      }
+      else if (type === 'complete' && synth instanceof Tone.PolySynth) synth.triggerAttackRelease(["C4", "E4", "G4"], "4n", scheduleTime);
+    } catch (e) {
+      console.error(`Error playing sound (${type}):`, e);
+    }
+  }, [isMuted]);
 
   const currentStep = PIT_STOP_STEPS[currentStepKey];
 
@@ -113,7 +131,7 @@ export function PitStopChallenge() {
     if (nextKey === 'finished') {
       playSound('complete');
       if (totalPitTime !== null) {
-         const isTopScore = leaderboard.length < MAX_PIT_LEADERBOARD_ENTRIES || totalPitTime < leaderboard[leaderboard.length - 1].time;
+         const isTopScore = leaderboard.length < MAX_PIT_LEADERBOARD_ENTRIES || totalPitTime < (leaderboard[leaderboard.length - 1]?.time ?? Infinity);
          if (isTopScore) {
            setShowNicknameModal(true);
          }
@@ -122,14 +140,13 @@ export function PitStopChallenge() {
       playSound('error');
       setTotalPitTime(null); 
     }
-
   }, [playSound, leaderboard, totalPitTime]);
 
 
   const handleAction = useCallback(() => {
-    if (isActionLocked) return; // Prevent action if locked
+    if (isActionLocked) return;
 
-    setIsActionLocked(true); // Lock action
+    setIsActionLocked(true);
     if(actionLockTimeoutRef.current) clearTimeout(actionLockTimeoutRef.current);
     actionLockTimeoutRef.current = setTimeout(() => setIsActionLocked(false), ACTION_COOLDOWN_MS);
 

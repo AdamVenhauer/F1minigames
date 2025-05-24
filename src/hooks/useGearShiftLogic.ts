@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { ScoreEntry } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import * as Tone from 'tone';
+import { useSound } from "@/context/SoundContext"; // Added import
 
 const GEAR_SHIFT_LEADERBOARD_KEY = "apexGearShiftLeaderboard";
 const MAX_LEADERBOARD_ENTRIES = 10;
@@ -32,8 +33,9 @@ interface ShiftFeedback {
 }
 
 export function useGearShiftLogic() {
+  const { isMuted } = useSound(); // Added
   const [gameState, setGameState] = useState<GearShiftGameState>("idle");
-  const gameStateRef = useRef(gameState); // Ref to hold current gameState for async callbacks
+  const gameStateRef = useRef(gameState); 
 
   const [currentGear, setCurrentGear] = useState(1);
   const [rpm, setRpm] = useState(0);
@@ -75,12 +77,8 @@ export function useGearShiftLogic() {
       if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
       if (synthsRef.current) {
         Object.values(synthsRef.current).forEach(synth => {
-          if (synth && typeof synth.dispose === 'function') {
-            try {
-              synth.dispose();
-            } catch (e) {
-              console.error("Error disposing synth:", e);
-            }
+          if (synth && !(synth as any).disposed) {
+            try { synth.dispose(); } catch (e) { /* ignore */ }
           }
         });
         synthsRef.current = null; 
@@ -89,32 +87,39 @@ export function useGearShiftLogic() {
   }, []);
 
   const playSound = useCallback((type: 'success' | 'perfect' | 'fail' | 'complete') => {
-    if (Tone.context.state !== 'running') {
-        Tone.start().catch(e => console.error("Tone.start failed:", e));
-    }
-    const synthConfig = synthsRef.current;
-    if (!synthConfig) return;
+    if (isMuted || !synthsRef.current) return; // Added isMuted check
 
-    const now = Tone.now();
+    try {
+      if (Tone.context.state !== 'running') {
+          Tone.start().catch(e => console.warn("Tone.start failed:", e));
+      }
+      const synth = synthsRef.current?.[type];
+      if (!synth || (synth as any).disposed) return;
 
-    switch (type) {
-      case 'success':
-        if (synthConfig.shiftSuccess) synthConfig.shiftSuccess.triggerAttackRelease("C5", "8n", now + 0.02);
-        break;
-      case 'perfect':
-        if (synthConfig.shiftPerfect) synthConfig.shiftPerfect.triggerAttackRelease("E5", "8n", now + 0.02, 0.8);
-        break;
-      case 'fail':
-        if (synthConfig.shiftFail) {
-            synthConfig.shiftFail.triggerRelease(now); 
-            synthConfig.shiftFail.triggerAttackRelease("8n", now + 0.05);
-        }
-        break;
-      case 'complete':
-        if (synthConfig.gameComplete) synthConfig.gameComplete.triggerAttackRelease(["C4", "E4", "G4"], "4n", now + 0.02);
-        break;
+      const now = Tone.now();
+      const scheduleTime = now + 0.02;
+
+      switch (type) {
+        case 'success':
+          if (synth instanceof Tone.Synth) synth.triggerAttackRelease("C5", "8n", scheduleTime);
+          break;
+        case 'perfect':
+          if (synth instanceof Tone.Synth) synth.triggerAttackRelease("E5", "8n", scheduleTime, 0.8);
+          break;
+        case 'fail':
+          if (synth instanceof Tone.NoiseSynth) {
+              synth.triggerRelease(now); // Stop any previous sound
+              synth.triggerAttackRelease("8n", now + 0.05); // Schedule new sound with delay
+          }
+          break;
+        case 'complete':
+          if (synth instanceof Tone.PolySynth) synth.triggerAttackRelease(["C4", "E4", "G4"], "4n", scheduleTime);
+          break;
+      }
+    } catch(e) {
+      console.error(`Error playing sound (${type}):`, e);
     }
-  }, []);
+  }, [isMuted]);
 
 
   const clearTimers = useCallback(() => {
@@ -132,22 +137,12 @@ export function useGearShiftLogic() {
           currentActualGameState === 'misfire_early' || 
           currentActualGameState === 'misfire_late') {
         setCurrentGear(g => g + 1);
-        // Directly call startRevving for the next gear.
-        // startRevving will set gameState to "revving"
-        // We rely on startRevving to correctly initialize the next revving phase.
-        // Note: This creates a dependency on startRevving being available in this scope.
-        // This is handled by including startRevving in the dependency array if useGearShiftLogic becomes more complex,
-        // but for now, it's defined in the same hook.
-        
-        // Wrapped in a timeout to ensure state updates from setCurrentGear propagate
-        // before startRevving (which also sets state) is called.
-        // This can help prevent race conditions if startRevving reads currentGear immediately.
         setTimeout(() => {
-          if (gameStateRef.current !== 'finished') { // Double check not finished in meantime
+          if (gameStateRef.current !== 'finished') {
              setRpm(0);
              setGameState("revving");
              setShiftFeedback(null);
-             clearTimers(); // Clear before starting new interval
+             clearTimers(); 
 
              rpmIntervalRef.current = setInterval(() => {
                 if (gameStateRef.current !== 'revving') {
@@ -155,11 +150,13 @@ export function useGearShiftLogic() {
                   return;
                 }
                 setRpm(prevRpm => {
-                  if (gameStateRef.current !== 'revving') return prevRpm;
+                  if (gameStateRef.current !== 'revving') return prevRpm; // Guard against state change
+                  if (prevRpm >= 100) return 100; // Already at max, interval should have been cleared
+                  
                   const nextRpm = prevRpm + RPM_INCREASE_PER_TICK;
                   if (nextRpm >= 100) {
                     if (rpmIntervalRef.current) clearInterval(rpmIntervalRef.current);
-                    if (gameStateRef.current === 'revving') {
+                    if (gameStateRef.current === 'revving') { // Check state *before* setting new state
                       const feedback: ShiftFeedback = { message: "Engine Over-Revved!", type: 'misfire_late', points: 0 };
                       setShiftFeedback(feedback);
                       playSound('fail');
@@ -181,18 +178,18 @@ export function useGearShiftLogic() {
       if (currentActualGameState !== 'finished') {
           playSound('complete');
           setGameState("finished");
-          const isTopScore = leaderboard.length < MAX_LEADERBOARD_ENTRIES || (totalScore > 0 && (leaderboard.length === 0 || totalScore > (leaderboard[leaderboard.length-1]?.time ?? 0) ));
-          if (isTopScore && totalScore > 0) {
+          const currentTotalScore = totalScore; // Capture current score for leaderboard check
+          const isTopScore = leaderboard.length < MAX_LEADERBOARD_ENTRIES || (currentTotalScore > 0 && (leaderboard.length === 0 || currentTotalScore > (leaderboard[leaderboard.length-1]?.time ?? -1) ));
+          if (isTopScore && currentTotalScore > 0) {
             setShowNicknameModal(true);
           }
       }
     }
-  }, [currentGear, leaderboard, totalScore, playSound, clearTimers /* startRevving was removed as direct call */]);
+  }, [currentGear, leaderboard, totalScore, playSound, clearTimers]);
 
 
   const startRevving = useCallback(() => {
     if (gameStateRef.current === 'finished' || gameStateRef.current === 'misfire_early' || gameStateRef.current === 'misfire_late') {
-      // Don't start revving if game is already in a terminal or fail state from a previous cycle
       return;
     }
     setRpm(0);
@@ -207,9 +204,9 @@ export function useGearShiftLogic() {
       }
 
       setRpm(prevRpm => {
-        if (gameStateRef.current !== 'revving') {
-            return prevRpm; 
-        }
+        if (gameStateRef.current !== 'revving') return prevRpm;
+        if (prevRpm >= 100) return 100; // Guard: if already 100, interval should have been cleared
+        
         const nextRpm = prevRpm + RPM_INCREASE_PER_TICK;
         if (nextRpm >= 100) {
           if (rpmIntervalRef.current) clearInterval(rpmIntervalRef.current);
@@ -240,14 +237,15 @@ export function useGearShiftLogic() {
     clearTimers(); 
 
     let feedback: ShiftFeedback;
+    const currentRpm = rpm; // Capture rpm at the moment of shift
 
-    if (rpm < MISFIRE_TOO_EARLY_THRESHOLD) {
+    if (currentRpm < MISFIRE_TOO_EARLY_THRESHOLD) {
       feedback = { message: "Misfire! Too early!", type: 'misfire_early', points: 0 };
-    } else if (rpm >= OPTIMAL_RPM_MIN && rpm <= OPTIMAL_RPM_MAX) {
+    } else if (currentRpm >= OPTIMAL_RPM_MIN && currentRpm <= OPTIMAL_RPM_MAX) {
       feedback = { message: "Perfect Shift!", type: 'perfect', points: 100 };
-    } else if (rpm >= OPTIMAL_RPM_MIN - GOOD_RPM_OFFSET && rpm <= OPTIMAL_RPM_MAX + GOOD_RPM_OFFSET) {
+    } else if (currentRpm >= OPTIMAL_RPM_MIN - GOOD_RPM_OFFSET && currentRpm <= OPTIMAL_RPM_MAX + GOOD_RPM_OFFSET) {
       feedback = { message: "Good Shift!", type: 'good', points: 50 };
-    } else if (rpm < OPTIMAL_RPM_MIN) {
+    } else if (currentRpm < OPTIMAL_RPM_MIN) {
       feedback = { message: "Shifted Early!", type: 'early', points: 25 };
     } else { 
       feedback = { message: "Shifted Late!", type: 'late', points: 25 };
@@ -266,7 +264,6 @@ export function useGearShiftLogic() {
     
     if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current); 
     feedbackTimeoutRef.current = setTimeout(() => {
-        // Ensure we only proceed if the state matches the one set by this shift action
         const expectedStateAfterShift = feedback.type === 'misfire_early' || feedback.type === 'misfire_late' ? feedback.type : 'shifted_check';
         if (gameStateRef.current === expectedStateAfterShift) {
             proceedToNextStepOrFinish();
@@ -281,9 +278,8 @@ export function useGearShiftLogic() {
     setTotalScore(0);
     setShiftFeedback(null);
     setShowNicknameModal(false);
-    // gameState will be set to 'revving' by startRevving
     startRevving(); 
-  }, [clearTimers, startRevving]); // Added startRevving to dependencies
+  }, [clearTimers, startRevving]);
 
   const saveGearShiftScore = useCallback((nickname: string) => {
     const newScore: ScoreEntry = {
@@ -302,10 +298,6 @@ export function useGearShiftLogic() {
   }, [totalScore, leaderboard, toast]);
   
   useEffect(() => {
-    // This effect helps manage the dependency cycle between startRevving and proceedToNextStepOrFinish
-    // by ensuring they are re-memoized if critical underlying functions (like playSound, clearTimers) change.
-    // Direct cyclical dependencies in useCallback arrays are generally okay if the functions are stable
-    // or change due to external state/prop changes.
   }, [playSound, clearTimers, proceedToNextStepOrFinish, startRevving]);
 
 
@@ -326,4 +318,3 @@ export function useGearShiftLogic() {
     OPTIMAL_RPM_MAX,
   };
 }
-

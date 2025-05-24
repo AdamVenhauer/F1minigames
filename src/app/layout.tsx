@@ -1,7 +1,9 @@
+
 import type {Metadata} from 'next';
 import {Geist, Geist_Mono} from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
+import { SoundProvider } from '@/context/SoundContext'; // Added import
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -26,16 +28,18 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
-        <div className="flex flex-col min-h-screen">
-          <main className="flex-grow">
-            {children}
-          </main>
-          <Toaster />
-          <footer className="py-6 px-4 text-center text-sm text-muted-foreground border-t">
-            <p>&copy; {new Date().getFullYear()} Apex Start. All rights reserved.</p>
-            <p>Inspired by the thrill of Formula 1.</p>
-          </footer>
-        </div>
+        <SoundProvider> {/* Added SoundProvider */}
+          <div className="flex flex-col min-h-screen">
+            <main className="flex-grow">
+              {children}
+            </main>
+            <Toaster />
+            <footer className="py-6 px-4 text-center text-sm text-muted-foreground border-t">
+              <p>&copy; {new Date().getFullYear()} Apex Start. All rights reserved.</p>
+              <p>Inspired by the thrill of Formula 1.</p>
+            </footer>
+          </div>
+        </SoundProvider> {/* Closed SoundProvider */}
       </body>
     </html>
   );
