@@ -8,10 +8,10 @@ import { Progress } from "@/components/ui/progress";
 import { Wrench, CheckCircle, XCircle, Clock, Zap, RotateCcw, Users, Fuel } from 'lucide-react';
 import { TireIcon } from '@/components/icons/TireIcon';
 import * as Tone from 'tone';
-import type { ScoreEntry } from '@/lib/types'; // Assuming similar leaderboard structure
+import type { ScoreEntry } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
-import { NicknameModal } from "./NicknameModal"; // Re-use nickname modal
-import { Leaderboard } from "./Leaderboard"; // Re-use leaderboard
+import { NicknameModal } from "./NicknameModal";
+import { Leaderboard } from "./Leaderboard";
 
 
 type PitStopStepKey = 'idle' | 'ready' | 'jack_up' | 'tires_off' | 'tires_on' | 'fueling' | 'jack_down' | 'go' | 'finished' | 'failed';
@@ -21,9 +21,9 @@ interface PitStopStep {
   label: string;
   actionText: string;
   icon: React.ReactNode;
-  durationMs: number; // Target duration for this step
+  durationMs: number; 
   next: PitStopStepKey | null;
-  fail?: PitStopStepKey; // Optional: step to go to on failure (e.g. early click)
+  fail?: PitStopStepKey; 
 }
 
 const PIT_STOP_STEPS: Record<PitStopStepKey, PitStopStep> = {
@@ -41,6 +41,7 @@ const PIT_STOP_STEPS: Record<PitStopStepKey, PitStopStep> = {
 
 const PIT_LEADERBOARD_KEY = "apexPitStopLeaderboard";
 const MAX_PIT_LEADERBOARD_ENTRIES = 10;
+const ACTION_COOLDOWN_MS = 150; // Brief cooldown to prevent spamming
 
 export function PitStopChallenge() {
   const [currentStepKey, setCurrentStepKey] = useState<PitStopStepKey>('idle');
@@ -50,9 +51,11 @@ export function PitStopChallenge() {
   const [progress, setProgress] = useState(0);
   const [showNicknameModal, setShowNicknameModal] = useState(false);
   const [leaderboard, setLeaderboard] = useState<ScoreEntry[]>([]);
+  const [isActionLocked, setIsActionLocked] = useState(false); // For anti-spam
   const { toast } = useToast();
 
   const stepTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const actionLockTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const synthsRef = useRef<{ click?: Tone.Synth, success?: Tone.Synth, error?: Tone.Synth, complete?: Tone.Synth } | null>(null);
   
   useEffect(() => {
@@ -61,7 +64,7 @@ export function PitStopChallenge() {
         click: new Tone.MembraneSynth().toDestination(),
         success: new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.01, release: 0.1 }}).toDestination(),
         error: new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }}).toDestination(),
-        complete: new Tone.PolySynth(Tone.Synth, { envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.2 }}).toDestination(),
+        complete: new Tone.PolySynth(Tone.Synth, { volume: -6, envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.2 }}).toDestination(),
       };
     }
     const storedLeaderboard = localStorage.getItem(PIT_LEADERBOARD_KEY);
@@ -70,18 +73,23 @@ export function PitStopChallenge() {
     }
     return () => {
       if (stepTimeoutRef.current) clearTimeout(stepTimeoutRef.current);
+      if (actionLockTimeoutRef.current) clearTimeout(actionLockTimeoutRef.current);
+      if (synthsRef.current) {
+        Object.values(synthsRef.current).forEach(synth => synth?.dispose());
+        synthsRef.current = null;
+      }
     };
   }, []);
 
   const playSound = useCallback((type: 'click' | 'success' | 'error' | 'complete') => {
-    if (Tone.context.state !== 'running') Tone.start();
+    if (Tone.context.state !== 'running') Tone.start().catch(e => console.error("Tone.start failed:", e));
     const synth = synthsRef.current?.[type];
     if (!synth) return;
-    
-    if (type === 'click') (synth as Tone.MembraneSynth).triggerAttackRelease("C2", "8n");
-    if (type === 'success') (synth as Tone.Synth).triggerAttackRelease("C5", "8n");
-    if (type === 'error') (synth as Tone.NoiseSynth).triggerAttackRelease("2n");
-    if (type === 'complete' && synth instanceof Tone.PolySynth) synth.triggerAttackRelease(["C4", "E4", "G4"], "4n");
+    const now = Tone.now();
+    if (type === 'click' && synth instanceof Tone.MembraneSynth) synth.triggerAttackRelease("C2", "8n", now + 0.01);
+    if (type === 'success' && synth instanceof Tone.Synth) synth.triggerAttackRelease("C5", "8n", now + 0.02);
+    if (type === 'error' && synth instanceof Tone.NoiseSynth) synth.triggerAttackRelease("2n", now + 0.03);
+    if (type === 'complete' && synth instanceof Tone.PolySynth) synth.triggerAttackRelease(["C4", "E4", "G4"], "4n", now + 0.02);
   }, []);
 
   const currentStep = PIT_STOP_STEPS[currentStepKey];
@@ -94,7 +102,7 @@ export function PitStopChallenge() {
     setStepStartTime(performance.now());
     setProgress(0);
 
-    if (nextStepConfig.durationMs > 0) { // For timed steps like 'ready' or 'fueling'
+    if (nextStepConfig.durationMs > 0) { 
       stepTimeoutRef.current = setTimeout(() => {
         if (nextStepConfig.next) {
           advanceStep(nextStepConfig.next);
@@ -104,7 +112,7 @@ export function PitStopChallenge() {
     
     if (nextKey === 'finished') {
       playSound('complete');
-      if (totalPitTime !== null) { // totalPitTime would be set by the 'go' step's action
+      if (totalPitTime !== null) {
          const isTopScore = leaderboard.length < MAX_PIT_LEADERBOARD_ENTRIES || totalPitTime < leaderboard[leaderboard.length - 1].time;
          if (isTopScore) {
            setShowNicknameModal(true);
@@ -112,18 +120,25 @@ export function PitStopChallenge() {
       }
     } else if (nextKey === 'failed') {
       playSound('error');
-      setTotalPitTime(null); // Reset time on failure
+      setTotalPitTime(null); 
     }
 
   }, [playSound, leaderboard, totalPitTime]);
 
 
   const handleAction = useCallback(() => {
+    if (isActionLocked) return; // Prevent action if locked
+
+    setIsActionLocked(true); // Lock action
+    if(actionLockTimeoutRef.current) clearTimeout(actionLockTimeoutRef.current);
+    actionLockTimeoutRef.current = setTimeout(() => setIsActionLocked(false), ACTION_COOLDOWN_MS);
+
+
     if (!currentStep.next && currentStepKey !== 'finished' && currentStepKey !== 'failed') return;
     playSound('click');
 
     if (currentStepKey === 'idle') {
-      setTotalPitTime(0); // Initialize total time
+      setTotalPitTime(0); 
       advanceStep('ready');
       return;
     }
@@ -134,25 +149,23 @@ export function PitStopChallenge() {
       return;
     }
 
-    // For steps that are not timed (require user click)
     if (currentStep.durationMs === 0) {
       if (currentStep.next) {
-        // Accumulate time for non-timed steps if stepStartTime is set
-        if (stepStartTime && currentStepKey !== 'ready') { // 'ready' is timed, its duration is handled by setTimeout
+        if (stepStartTime && currentStepKey !== 'ready') { 
             setTotalPitTime(prev => (prev ?? 0) + (performance.now() - stepStartTime));
         }
         advanceStep(currentStep.next);
         playSound('success');
       }
-    } else { // Early click on a timed step (e.g. 'ready' or 'fueling')
+    } else { 
       if (currentStep.fail) {
         advanceStep(currentStep.fail);
       }
     }
-  }, [currentStep, stepStartTime, advanceStep, playSound, currentStepKey]);
+  }, [currentStep, stepStartTime, advanceStep, playSound, currentStepKey, isActionLocked]);
 
 
-  useEffect(() => { // Timer for display and progress bar
+  useEffect(() => { 
     let intervalId: NodeJS.Timeout | undefined;
     if (stepStartTime && (currentStepKey !== 'idle' && currentStepKey !== 'finished' && currentStepKey !== 'failed')) {
       intervalId = setInterval(() => {
@@ -174,7 +187,7 @@ export function PitStopChallenge() {
     const newScore: ScoreEntry = {
       id: Date.now().toString(),
       nickname,
-      time: Math.round(totalPitTime), // Save as integer milliseconds
+      time: Math.round(totalPitTime), 
       date: new Date().toISOString(),
     };
     const updatedLeaderboard = [...leaderboard, newScore]
@@ -222,14 +235,14 @@ export function PitStopChallenge() {
             onClick={handleAction}
             size="lg"
             className="w-full max-w-xs text-lg py-6 rounded-lg shadow-lg transition-transform hover:scale-105 focus:ring-4 focus:ring-accent/50"
-            disabled={currentStepKey === 'ready' || (currentStepKey === 'fueling' && progress < 100) }
+            disabled={isActionLocked || currentStepKey === 'ready' || (currentStepKey === 'fueling' && progress < 100) }
             variant={(currentStepKey === 'finished' || currentStepKey === 'failed') ? 'outline' : 'default'}
           >
             {currentStep.actionText}
           </Button>
         </CardContent>
       </Card>
-      <Leaderboard scores={leaderboard} />
+      <Leaderboard scores={leaderboard} scoreHeaderText="Pit Time (ms)" />
       <NicknameModal
         isOpen={showNicknameModal}
         onClose={() => setShowNicknameModal(false)}
@@ -239,5 +252,3 @@ export function PitStopChallenge() {
     </div>
   );
 }
-
-    

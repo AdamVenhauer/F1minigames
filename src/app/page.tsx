@@ -3,12 +3,13 @@
 import { useState, type ReactNode } from 'react';
 import { GameInterface } from "@/components/game/GameInterface";
 import { PitStopChallenge } from "@/components/game/PitStopChallenge";
-import { GearShiftChallenge } from "@/components/game/GearShiftChallenge"; // Added import
+import { GearShiftChallenge } from "@/components/game/GearShiftChallenge";
+import { F1TriviaChallenge } from "@/components/game/F1TriviaChallenge"; // Added import
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Zap, Wrench, Gauge } from 'lucide-react'; // Added Gauge icon
+import { ArrowLeft, Zap, Wrench, Gauge, Brain } from 'lucide-react'; // Added Brain icon
 
-type GameKey = 'menu' | 'reflex' | 'pitstop' | 'gearshift'; // Added 'gearshift'
+type GameKey = 'menu' | 'reflex' | 'pitstop' | 'gearshift' | 'trivia'; // Added 'trivia'
 
 interface GameCardProps {
   title: string;
@@ -49,8 +50,10 @@ export default function HomePage() {
         return <GameInterface />;
       case 'pitstop':
         return <PitStopChallenge />;
-      case 'gearshift': // Added case for GearShiftChallenge
+      case 'gearshift':
         return <GearShiftChallenge />;
+      case 'trivia': // Added case for F1TriviaChallenge
+        return <F1TriviaChallenge />;
       default:
         return null;
     }
@@ -94,7 +97,12 @@ export default function HomePage() {
           icon={<Gauge className="w-10 h-10 text-accent" />}
           onClick={() => setSelectedGame('gearshift')}
         />
-        {/* Add more game cards here as new games are developed */}
+        <GameSelectionCard 
+          title="F1 Trivia Challenge"
+          description="Test your Formula 1 knowledge."
+          icon={<Brain className="w-10 h-10 text-accent" />}
+          onClick={() => setSelectedGame('trivia')}
+        />
       </div>
       <style jsx global>{`
         :root {
