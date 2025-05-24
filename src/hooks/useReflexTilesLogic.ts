@@ -50,12 +50,17 @@ export function useReflexTilesLogic() {
     initializeGrid(); // Initialize grid on mount
 
     if (typeof window !== 'undefined' && !synthsRef.current) {
-      synthsRef.current = {
-        tileAppear: new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.01, release: 0.1 } }).toDestination(),
-        correctHit: new Tone.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.01, release: 0.1 } }).toDestination(),
-        incorrectHit: new Tone.NoiseSynth({ noise: { type: "pink" }, envelope: { attack: 0.01, decay: 0.15, sustain: 0, release: 0.1 } }).toDestination(),
-        gameComplete: new Tone.PolySynth(Tone.Synth, { volume: -6, envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.2 } }).toDestination(),
-      };
+      try {
+        synthsRef.current = {
+          tileAppear: new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.01, release: 0.1 } }).toDestination(),
+          correctHit: new Tone.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.01, release: 0.1 } }).toDestination(),
+          incorrectHit: new Tone.NoiseSynth({ noise: { type: "pink" }, envelope: { attack: 0.01, decay: 0.15, sustain: 0, release: 0.1 } }).toDestination(),
+          gameComplete: new Tone.PolySynth(Tone.Synth, { volume: -6, envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.2 } }).toDestination(),
+        };
+      } catch (e) {
+        console.error("Error initializing Tone.js synths for ReflexTiles:", e);
+        synthsRef.current = null; // Ensure it's null if initialization fails
+      }
     }
 
     const storedLeaderboard = localStorage.getItem(REFLEX_TILES_LEADERBOARD_KEY);
@@ -67,9 +72,9 @@ export function useReflexTilesLogic() {
       if (gameLoopTimeoutRef.current) clearTimeout(gameLoopTimeoutRef.current);
       if (synthsRef.current) {
         Object.values(synthsRef.current).forEach(synth => {
-          if (synth && !(synth as any).disposed) {
-            try { synth.dispose(); } catch (e) { /* ignore */ }
-          }
+          try {
+            if (synth && !(synth as any).disposed) synth.dispose();
+          } catch (e) { /* ignore */ }
         });
         synthsRef.current = null;
       }
@@ -79,39 +84,62 @@ export function useReflexTilesLogic() {
   const playSound = useCallback(async (type: 'appear' | 'correct' | 'incorrect' | 'complete') => {
     if (typeof window === 'undefined') return;
     try {
-      if (Tone.context.state !== 'running') await Tone.start();
-    } catch (e) { console.warn(`Tone.start() failed:`, e); return; }
+      if (Tone.context.state !== 'running') {
+        await Tone.start();
+      }
+    } catch (e) {
+      console.warn(`Tone.start() failed in playSound (${type}):`, e);
+      return; // Don't proceed if Tone.start() fails
+    }
 
     if (isMuted || !synthsRef.current) return;
+
     const synthMap = synthsRef.current;
-    const now = Tone.now();
-    const scheduleTime = now + 0.02;
+    let synthToPlay: Tone.Synth | Tone.NoiseSynth | Tone.PolySynth | undefined;
+
+    switch (type) {
+      case 'appear': synthToPlay = synthMap.tileAppear; break;
+      case 'correct': synthToPlay = synthMap.correctHit; break;
+      case 'incorrect': synthToPlay = synthMap.incorrectHit; break;
+      case 'complete': synthToPlay = synthMap.gameComplete; break;
+    }
+    
+    if (!synthToPlay || (synthToPlay as any).disposed) {
+        // console.warn(`Synth for type ${type} not available or disposed.`);
+        return;
+    }
 
     try {
-      if (type === 'appear' && synthMap.tileAppear && !synthMap.tileAppear.disposed) {
-        synthMap.tileAppear.triggerAttackRelease("C5", "16n", scheduleTime);
-      } else if (type === 'correct' && synthMap.correctHit && !synthMap.correctHit.disposed) {
-        synthMap.correctHit.triggerAttackRelease("E5", "16n", scheduleTime);
-      } else if (type === 'incorrect' && synthMap.incorrectHit && !synthMap.incorrectHit.disposed) {
-        synthMap.incorrectHit.triggerRelease(now); // Stop if already playing
-        synthMap.incorrectHit.triggerAttackRelease("8n", now + 0.05);
-      } else if (type === 'complete' && synthMap.gameComplete && !synthMap.gameComplete.disposed) {
-        synthMap.gameComplete.triggerAttackRelease(["C4", "E4", "G4"], "4n", scheduleTime);
+      const now = Tone.now();
+      const scheduleTime = now + 0.02; // Small consistent offset
+
+      if (type === 'incorrect' && synthToPlay instanceof Tone.NoiseSynth) {
+        synthToPlay.triggerRelease(now); // Attempt to stop any current sound
+        synthToPlay.triggerAttackRelease("8n", now + 0.05); // Schedule new sound with a bit more delay
+      } else if (type === 'complete' && synthToPlay instanceof Tone.PolySynth) {
+        synthToPlay.triggerAttackRelease(["C4", "E4", "G4"], "4n", scheduleTime);
+      } else if (synthToPlay instanceof Tone.Synth) {
+        const note = type === 'appear' ? "C5" : "E5"; // Example notes
+        synthToPlay.triggerAttackRelease(note, "16n", scheduleTime);
       }
-    } catch (e) { console.error(`Error playing sound (${type}):`, e); }
+    } catch (e) {
+      console.error(`Error playing sound (${type}):`, e);
+    }
   }, [isMuted]);
 
   const lightUpRandomTile = useCallback(() => {
     setTiles(prevTiles => {
       const availableTiles = prevTiles.filter(t => !t.isLit);
-      if (availableTiles.length === 0) { // Should not happen if logic is correct
-        return prevTiles.map(t => ({ ...t, isLit: false })); // Reset if stuck
+      if (availableTiles.length === 0) {
+        return prevTiles.map(t => ({ ...t, isLit: false }));
       }
       const randomIndex = Math.floor(Math.random() * availableTiles.length);
       const tileToLight = availableTiles[randomIndex];
+      
       setActiveTileId(tileToLight.id);
       setReactionStartTime(performance.now());
       playSound('appear');
+      
       return prevTiles.map(t => t.id === tileToLight.id ? { ...t, isLit: true } : { ...t, isLit: false });
     });
   }, [playSound]);
@@ -120,7 +148,7 @@ export function useReflexTilesLogic() {
     if (gameLoopTimeoutRef.current) clearTimeout(gameLoopTimeoutRef.current);
     setGameState("finished");
     setActiveTileId(null);
-    setTiles(prevTiles => prevTiles.map(t => ({ ...t, isLit: false }))); // Turn off all tiles
+    setTiles(prevTiles => prevTiles.map(t => ({ ...t, isLit: false })));
     const avgReaction = correctHits > 0 ? Math.round(totalReactionTime / correctHits) : 0;
     setAverageReactionTime(avgReaction);
     playSound('complete');
@@ -133,40 +161,43 @@ export function useReflexTilesLogic() {
 
 
   const handleTileClick = useCallback((tileId: number) => {
-    if (gameState !== "playing" || tileId !== activeTileId) {
-      if (gameState === "playing" && activeTileId !== null) { // Misclick on a non-active tile
+    if (gameState !== "playing") return;
+
+    if (tileId !== activeTileId) {
+      if (activeTileId !== null) { // Misclick on a non-active tile while another is lit
         playSound('incorrect');
-        setScore(prev => Math.max(0, prev - 25)); // Penalty for misclick
+        setScore(prev => Math.max(0, prev - 25));
       }
       return;
     }
 
+    // Correct hit
     if (gameLoopTimeoutRef.current) clearTimeout(gameLoopTimeoutRef.current);
 
     const rt = performance.now() - reactionStartTime;
-    const points = Math.max(10, 150 - Math.floor(rt / 10)); // Score inversely proportional to reaction time
+    const points = Math.max(10, 150 - Math.floor(rt / 10));
 
     setScore(prevScore => prevScore + points);
     setTotalReactionTime(prev => prev + rt);
-    setCorrectHits(prevHits => {
-      const newHits = prevHits + 1;
-      if (newHits >= TILES_TO_COMPLETE) {
-        endGame();
-      } else {
-        gameLoopTimeoutRef.current = setTimeout(lightUpRandomTile, NEXT_TILE_DELAY_MS);
-      }
-      return newHits;
-    });
-
+    
     setTiles(prevTiles => prevTiles.map(t => t.id === tileId ? { ...t, isLit: false } : t));
-    setActiveTileId(null); // Important to prevent re-triggering on the same lit tile quickly
+    setActiveTileId(null); 
     playSound('correct');
 
-  }, [gameState, activeTileId, reactionStartTime, endGame, lightUpRandomTile, playSound]);
+    const newHits = correctHits + 1; // Calculate newHits based on current correctHits
+    setCorrectHits(newHits);
+
+    if (newHits >= TILES_TO_COMPLETE) {
+      endGame();
+    } else {
+      gameLoopTimeoutRef.current = setTimeout(lightUpRandomTile, NEXT_TILE_DELAY_MS);
+    }
+
+  }, [gameState, activeTileId, reactionStartTime, playSound, correctHits, endGame, lightUpRandomTile]);
 
   const startGame = useCallback(async () => {
-    if (Tone.context.state !== 'running') {
-      try { await Tone.start(); } catch (e) { console.warn("Tone.start failed in startGame:", e); }
+    if (typeof window !== 'undefined' && Tone.context.state !== 'running') {
+      try { await Tone.start(); } catch (e) { console.warn("Tone.start failed in startGame (ReflexTiles):", e); }
     }
     initializeGrid();
     setScore(0);
@@ -184,11 +215,11 @@ export function useReflexTilesLogic() {
     const newScore: ScoreEntry = {
       id: Date.now().toString(),
       nickname,
-      time: score, // Store score, higher is better
+      time: score, 
       date: new Date().toISOString(),
     };
     const updatedLeaderboard = [...leaderboard, newScore]
-      .sort((a, b) => b.time - a.time) // Sort descending by score
+      .sort((a, b) => b.time - a.time) 
       .slice(0, MAX_LEADERBOARD_ENTRIES);
     setLeaderboard(updatedLeaderboard);
     localStorage.setItem(REFLEX_TILES_LEADERBOARD_KEY, JSON.stringify(updatedLeaderboard));
@@ -212,3 +243,4 @@ export function useReflexTilesLogic() {
     setShowNicknameModal,
   };
 }
+
