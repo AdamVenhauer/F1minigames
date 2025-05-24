@@ -16,6 +16,7 @@ const TIRE_WEAR_PER_LAP = 22;
 const TIRE_WEAR_PIT_RESET = 5; 
 const TIRE_WEAR_TIME_PENALTY_FACTOR = 60; 
 
+// QTE Time Adjustments (Negative is good for player)
 const TIME_START_GOOD = -3000; 
 const TIME_START_BAD = 4500;  
 const TIME_OVERTAKE_SUCCESS = -3200; 
@@ -27,6 +28,7 @@ const DRS_BONUS_GOOD_TIRES = -2500;
 const DRS_BONUS_WORN_TIRES = -1300; 
 const DRS_FAIL_PENALTY = 2200;  
 
+// Generic QTEs
 const WEATHER_QTE_SUCCESS = -1200;
 const WEATHER_QTE_FAIL = 2800;
 const MECHANICAL_SCARE_SUCCESS = -900;
@@ -40,6 +42,7 @@ const COMPONENT_WARNING_FAIL = 3300;
 const BLUE_FLAG_SUCCESS = -200;
 const BLUE_FLAG_FAIL = 2200;
 
+// Qualifying
 const QUALIFYING_BASE_TIME_MS = 58000; 
 const QTE_QUALIFYING_BONUS = -2500; 
 const QTE_QUALIFYING_PENALTY = 3500; 
@@ -53,34 +56,34 @@ const QUALIFYING_EVENTS_CONFIG: RaceEvent[] = [
 
 const RACE_EVENTS_CONFIG: RaceEvent[] = [
   // Lap 1
-  { id: 'evt_lap1_start', lap: 1, type: 'start_qte', qteDurationMs: 800 },
-  { id: 'evt_lap1_overtake_early', lap: 1, type: 'overtake_qte', qteDurationMs: 700},
-  { id: 'evt_lap1_corners_tight', lap: 1, type: 'defend_qte', event_subtype: 'tight_corners', qteDurationMs: 850 },
-  { id: 'evt_lap1_drs_zone', lap: 1, type: 'drs_qte', qteDurationMs: 400 },
+  { id: 'evt_lap1_start', lap: 1, type: 'start_qte', qteDurationMs: 700 },
+  { id: 'evt_lap1_overtake_early', lap: 1, type: 'overtake_qte', qteDurationMs: 650},
+  { id: 'evt_lap1_corners_tight', lap: 1, type: 'defend_qte', event_subtype: 'tight_corners', qteDurationMs: 800 },
+  { id: 'evt_lap1_drs_zone', lap: 1, type: 'drs_qte', qteDurationMs: 350 },
   
   // Lap 2
-  { id: 'evt_lap2_defend_pressure', lap: 2, type: 'defend_qte', qteDurationMs: 750 },
+  { id: 'evt_lap2_defend_pressure', lap: 2, type: 'defend_qte', qteDurationMs: 700 },
   { id: 'evt_lap2_pit_window1', lap: 2, type: 'pit_decision', options: ["Pit for Hards", "Stay Out (Mediums)"] },
-  { id: 'evt_lap2_weather_drizzle', lap: 2, type: 'qte_generic', event_subtype: 'weather_drizzle', qteDurationMs: 1000, successMessage: "Adapted well to the light drizzle!", failureMessage: "Struggled in the slippery conditions, lost pace." },
-  { id: 'evt_lap2_blue_flags', lap: 2, type: 'qte_generic', event_subtype: 'blue_flags', qteDurationMs: 800, successMessage: "Efficiently cleared backmarkers!", failureMessage: "Held up by slow traffic!" },
+  { id: 'evt_lap2_weather_drizzle', lap: 2, type: 'qte_generic', event_subtype: 'weather_drizzle', qteDurationMs: 950, successMessage: "Adapted well to the light drizzle!", failureMessage: "Struggled in the slippery conditions, lost pace." },
+  { id: 'evt_lap2_blue_flags', lap: 2, type: 'qte_generic', event_subtype: 'blue_flags', qteDurationMs: 750, successMessage: "Efficiently cleared backmarkers!", failureMessage: "Held up by slow traffic!" },
   
   // Lap 3
-  { id: 'evt_lap3_overtake_midrace', lap: 3, type: 'overtake_qte', qteDurationMs: 650 },
-  { id: 'evt_lap3_drs_long_straight', lap: 3, type: 'drs_qte', qteDurationMs: 350 },
-  { id: 'evt_lap3_mechanical_scare', lap: 3, type: 'qte_generic', event_subtype: 'mechanical_scare', qteDurationMs: 800, successMessage: "Systems reset! Crisis averted, minimal time loss.", failureMessage: "Mechanical gremlin cost valuable seconds." },
-  { id: 'evt_lap3_yellow_flag_debris', lap: 3, type: 'qte_generic', event_subtype: 'yellow_flag', qteDurationMs: 700, successMessage: "Good reaction to yellow flags for debris.", failureMessage: "Penalty risk! Too fast through debris zone." },
+  { id: 'evt_lap3_overtake_midrace', lap: 3, type: 'overtake_qte', qteDurationMs: 600 },
+  { id: 'evt_lap3_drs_long_straight', lap: 3, type: 'drs_qte', qteDurationMs: 300 },
+  { id: 'evt_lap3_mechanical_scare', lap: 3, type: 'qte_generic', event_subtype: 'mechanical_scare', qteDurationMs: 750, successMessage: "Systems reset! Crisis averted, minimal time loss.", failureMessage: "Mechanical gremlin cost valuable seconds." },
+  { id: 'evt_lap3_yellow_flag_debris', lap: 3, type: 'qte_generic', event_subtype: 'yellow_flag', qteDurationMs: 650, successMessage: "Good reaction to yellow flags for debris.", failureMessage: "Penalty risk! Too fast through debris zone." },
 
   // Lap 4
-  { id: 'evt_lap4_defend_late_braking', lap: 4, type: 'defend_qte', qteDurationMs: 700 },
+  { id: 'evt_lap4_defend_late_braking', lap: 4, type: 'defend_qte', qteDurationMs: 650 },
   { id: 'evt_lap4_pit_window2', lap: 4, type: 'pit_decision', options: ["Pit for Softs (Aggressive)", "Stay Out (Worn Tires)"] },
-  { id: 'evt_lap4_component_warning', lap: 4, type: 'qte_generic', event_subtype: 'component_warning', qteDurationMs: 900, successMessage: "Careful management, component holding!", failureMessage: "Component issue worsened, significant time lost." },
-  { id: 'evt_lap4_drs_train', lap: 4, type: 'drs_qte', qteDurationMs: 300 },
+  { id: 'evt_lap4_component_warning', lap: 4, type: 'qte_generic', event_subtype: 'component_warning', qteDurationMs: 850, successMessage: "Careful management, component holding!", failureMessage: "Component issue worsened, significant time lost." },
+  { id: 'evt_lap4_drs_train', lap: 4, type: 'drs_qte', qteDurationMs: 280 },
 
   // Lap 5
-  { id: 'evt_lap5_safety_car_restart', lap: 5, type: 'qte_generic', event_subtype: 'safety_car_restart', qteDurationMs: 800 },
-  { id: 'evt_lap5_overtake_final_laps', lap: 5, type: 'overtake_qte', qteDurationMs: 600 },
-  { id: 'evt_lap5_drs_final_chance', lap: 5, type: 'drs_qte', qteDurationMs: 250 },
-  { id: 'evt_lap5_defend_to_finish', lap: 5, type: 'defend_qte', qteDurationMs: 650 },
+  { id: 'evt_lap5_safety_car_restart', lap: 5, type: 'qte_generic', event_subtype: 'safety_car_restart', qteDurationMs: 750 },
+  { id: 'evt_lap5_overtake_final_laps', lap: 5, type: 'overtake_qte', qteDurationMs: 550 },
+  { id: 'evt_lap5_drs_final_chance', lap: 5, type: 'drs_qte', qteDurationMs: 230 },
+  { id: 'evt_lap5_defend_to_finish', lap: 5, type: 'defend_qte', qteDurationMs: 600 },
 ];
 
 
@@ -110,10 +113,11 @@ export function useRaceStrategyLogic() {
   const eventTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const qteIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const qteStartRef = useRef<number>(0);
+  
   const currentEventIndexRef = useRef(0);
-  const completedLapRef = useRef(0);
+  // Tracks the last lap for which base time and penalties have been fully accounted and added.
+  const completedLapTimeCalcRef = useRef(0); 
 
-  const processNextEventRef = useRef<() => void>();
 
   const synthsRef = useRef<{
     eventTrigger?: Tone.Synth;
@@ -154,7 +158,7 @@ export function useRaceStrategyLogic() {
         Object.values(synthsRef.current).forEach(synth => {
           try {
             if (synth && !(synth as any).disposed) synth.dispose();
-          } catch (e) { console.warn("Error disposing synth:", e); }
+          } catch (e) { /* ignore */ }
         });
         synthsRef.current = null; 
       }
@@ -162,16 +166,18 @@ export function useRaceStrategyLogic() {
   }, [clearTimers]);
 
   const playSound = useCallback(async (type: 'event' | 'success' | 'fail' | 'pit' | 'finish' | 'countdown') => {
-    if (typeof window === 'undefined' || isMuted || !synthsRef.current) return;
-    
+    if (typeof window === 'undefined') return;
+
     try {
-      if (Tone.context.state !== 'running') {
-        await Tone.start();
-      }
+        if (Tone.context.state !== 'running') {
+            await Tone.start();
+        }
     } catch (e) {
-      console.warn(`Tone.start() failed in playSound (${type}):`, e);
-      return; 
+        console.warn(`Tone.start() failed in playSound (${type}):`, e);
+        return; 
     }
+    
+    if (isMuted || !synthsRef.current) return;
 
     try {
       const synthConfig = synthsRef.current;
@@ -187,7 +193,7 @@ export function useRaceStrategyLogic() {
       }
       
       if (!synthToPlay || (synthToPlay as any).disposed) {
-        console.warn(`Synth for type ${type} not found or disposed.`);
+        // console.warn(`Synth for type ${type} not found or disposed.`);
         return;
       }
 
@@ -205,7 +211,7 @@ export function useRaceStrategyLogic() {
         synthToPlay.triggerAttackRelease(note, duration, scheduleTime);
       }
     } catch (e) {
-       console.error(`Error playing sound type ${type}:`, e);
+       // console.error(`Error playing sound type ${type}:`, e);
     }
   }, [isMuted]);
   
@@ -268,7 +274,7 @@ export function useRaceStrategyLogic() {
             dynamicTexts.description = baseEvent.options?.[0]?.toLowerCase().includes("hards") ? 
                 `Pit window open! Current position: ${posP}. Hards offer durability for a long stint. Your call!` :
                 `Final pit window! Currently ${posP}. Softs for a late charge, or brave it on worn tires?`;
-            dynamicTexts.actionText = "Make Call"; // Generic for options
+            // actionText will be the options themselves
             break;
         case 'qte_generic':
             if (baseEvent.event_subtype === 'safety_car_restart') {
@@ -298,7 +304,7 @@ export function useRaceStrategyLogic() {
             dynamicTexts.actionText = baseEvent.actionText || "React!";
     }
     return dynamicTexts;
-  }, [playerStateRef]);
+  }, []); // playerStateRef is used inside, but its .current doesn't trigger re-memoization. Relies on re-render.
 
   const determineQualifyingPosition = (qualifyingTimeMs: number): number => {
     if (qualifyingTimeMs <= QUALIFYING_BASE_TIME_MS - 5000) return 1; 
@@ -311,18 +317,17 @@ export function useRaceStrategyLogic() {
     return 8; 
   };
   
-  // Define functions that processNextEvent might call, or that call processNextEvent.
-  // These will use processNextEventRef.current() if they need to call it.
+  const processNextEventRef = useRef<() => void>();
 
   const endRace = useCallback(() => {
     clearTimers();
-    const finalPlayerState = playerStateRef.current;
+    const finalPlayerState = playerStateRef.current; // Use ref for latest state
     const finalMessage = finalPlayerState.position === 1 
       ? `P1 Finish! Your Time: ${(finalPlayerState.playerTimeMs / 1000).toFixed(3)}s`
       : `Race Complete! Final Position: P${finalPlayerState.position}. Time: ${(finalPlayerState.playerTimeMs / 1000).toFixed(3)}s.`;
 
     setPlayerState(prev => ({ 
-        ...prev,
+        ...prev, // Use prev to ensure it's based on the latest state before this update
         lap: TOTAL_LAPS, 
         lastEventMessage: finalMessage 
     }));
@@ -337,9 +342,10 @@ export function useRaceStrategyLogic() {
             setShowNicknameModal(true);
         }
     }
-  }, [clearTimers, playSound, playerStateRef, gameStateRef, leaderboard, toast, setShowNicknameModal, TOTAL_LAPS, setPlayerState, setGameState]);
+  }, [leaderboard, playSound]); // Dependencies on stable functions/refs
 
   const calculateQualifyingResults = useCallback(() => {
+    clearTimers();
     const qTime = playerStateRef.current.playerTimeMs;
     const startPos = determineQualifyingPosition(qTime);
     
@@ -354,15 +360,18 @@ export function useRaceStrategyLogic() {
 
     eventTimeoutRef.current = setTimeout(() => {
         if (gameStateRef.current !== 'qualifying_result') return;
+        
         setPlayerState(prev => ({
             ...INITIAL_PLAYER_STATE, 
             qualifyingTimeMs: prev.qualifyingTimeMs, 
             startingPosition: prev.startingPosition,
-            position: prev.startingPosition || 8,
+            position: prev.startingPosition || 8, // Set initial race position
+            // lap will be 0, processNextEvent will set it to 1 for the first race event
             lastEventMessage: `Race starting from P${prev.startingPosition || 8}...`
         }));
-        currentEventIndexRef.current = 0; 
-        completedLapRef.current = 0;
+        currentEventIndexRef.current = 0; // Reset for race events
+        completedLapTimeCalcRef.current = 0; // Reset for race
+
         setGameState("countdown");
 
         let countdown = 3;
@@ -387,13 +396,14 @@ export function useRaceStrategyLogic() {
                 }
             }
         }, 1000);
-    }, 4000);
-  }, [playSound, playerStateRef, gameStateRef, currentEventIndexRef, completedLapRef, determineQualifyingPosition, setPlayerState, setGameState]);
+    }, 4000); // Time to display qualifying results
+  }, [playSound]);
 
 
   const handleEventAction = useCallback((choice?: string | number | undefined, timedOut: boolean = false) => {
     const currentPhase = gameStateRef.current;
     if ((currentPhase !== "event_active" && currentPhase !== "qualifying_lap") || !currentEvent) return;
+    
     clearTimers();
 
     let timeDelta = 0;
@@ -414,19 +424,30 @@ export function useRaceStrategyLogic() {
             eventResultMessage = currentEvent.failureMessage || "Quali QTE Failed!";
             playSound('fail');
         }
-    } else { 
-        if (timedOut || !qteSuccess) { 
+    } else { // Race phase
+        if (timedOut && currentEvent.type !== 'pit_decision') { // Pit decision timeout means "Stay Out" effectively
             playSound('fail');
-            eventResultMessage = currentEvent.failureMessage || "Event Failed!";
+            eventResultMessage = currentEvent.failureMessage || "Event Failed - Timed Out!";
             if (currentEvent.type === 'start_qte') { timeDelta += TIME_START_BAD; positionChange = Math.random() < 0.7 ? 2 : 1; } 
             else if (currentEvent.type === 'overtake_qte') { timeDelta += TIME_OVERTAKE_FAIL; }
             else if (currentEvent.type === 'defend_qte') { timeDelta += TIME_DEFEND_FAIL; positionChange = 1; }
             else if (currentEvent.type === 'drs_qte') { timeDelta += DRS_FAIL_PENALTY; }
-            else if (currentEvent.type === 'pit_decision') {
-                eventResultMessage = "Decision window missed! Staying out on worn tires.";
-                if (playerStateRef.current.tireWear > 60) timeDelta += 4000; // Penalty for missing crucial pit
+            else if (currentEvent.type === 'qte_generic') { // Generic QTE timed out
+                if (currentEvent.event_subtype === 'weather_drizzle') timeDelta += WEATHER_QTE_FAIL;
+                if (currentEvent.event_subtype === 'mechanical_scare') timeDelta += MECHANICAL_SCARE_FAIL;
+                if (currentEvent.event_subtype === 'safety_car_restart') { timeDelta += SAFETY_CAR_FAIL; positionChange = Math.random() < 0.7 ? 1: 0; }
+                if (currentEvent.event_subtype === 'yellow_flag') timeDelta += YELLOW_FLAG_FAIL;
+                if (currentEvent.event_subtype === 'component_warning') timeDelta += COMPONENT_WARNING_FAIL;
+                if (currentEvent.event_subtype === 'blue_flags') timeDelta += BLUE_FLAG_FAIL;
             }
-            else if (currentEvent.type === 'qte_generic') {
+        } else if (!qteSuccess && currentEvent.type !== 'pit_decision') { // QTE failed by action, not timeout
+            playSound('fail');
+            eventResultMessage = currentEvent.failureMessage || "Event Failed!";
+             if (currentEvent.type === 'start_qte') { timeDelta += TIME_START_BAD; positionChange = Math.random() < 0.7 ? 2 : 1; } 
+            else if (currentEvent.type === 'overtake_qte') { timeDelta += TIME_OVERTAKE_FAIL; }
+            else if (currentEvent.type === 'defend_qte') { timeDelta += TIME_DEFEND_FAIL; positionChange = 1; }
+            else if (currentEvent.type === 'drs_qte') { timeDelta += DRS_FAIL_PENALTY; }
+             else if (currentEvent.type === 'qte_generic') {
                 if (currentEvent.event_subtype === 'weather_drizzle') { timeDelta += WEATHER_QTE_FAIL; if (playerStateRef.current.tireWear > 70) timeDelta += 1500; } 
                 if (currentEvent.event_subtype === 'mechanical_scare') timeDelta += MECHANICAL_SCARE_FAIL;
                 if (currentEvent.event_subtype === 'safety_car_restart') { timeDelta += SAFETY_CAR_FAIL; positionChange = Math.random() < 0.7 ? 1: 0; }
@@ -434,8 +455,8 @@ export function useRaceStrategyLogic() {
                 if (currentEvent.event_subtype === 'component_warning') timeDelta += COMPONENT_WARNING_FAIL;
                 if (currentEvent.event_subtype === 'blue_flags') timeDelta += BLUE_FLAG_FAIL;
             }
-        } else { 
-            playSound('success');
+        } else { // QTE Success OR Pit Decision
+            if (currentEvent.type !== 'pit_decision') playSound('success'); // Pit sound handled in pit_decision
             eventResultMessage = currentEvent.successMessage || "Event Success!";
             switch (currentEvent.type) {
                 case 'start_qte': timeDelta += TIME_START_GOOD; if (playerStateRef.current.startingPosition && playerStateRef.current.startingPosition > 3 && Math.random() < 0.6) positionChange = -1; break;
@@ -444,15 +465,16 @@ export function useRaceStrategyLogic() {
                 case 'drs_qte': timeDelta += (playerStateRef.current.tireWear < 60) ? DRS_BONUS_GOOD_TIRES : DRS_BONUS_WORN_TIRES; break; 
                 case 'pit_decision':
                     playSound('pit');
-                    if (choice === currentEvent.options![0]) { 
+                    const chosenOption = timedOut ? currentEvent.options![1] : choice; // Default to "Stay Out" if timed out
+                    if (chosenOption === currentEvent.options![0]) { // "Pit for X"
                         timeDelta += TIME_PIT_STOP_COST;
                         newTireWear = TIRE_WEAR_PIT_RESET;
-                        eventResultMessage = `Pit stop for ${choice}! Cost: ${(TIME_PIT_STOP_COST/1000).toFixed(1)}s. New tire wear: ${newTireWear}%.`;
+                        eventResultMessage = `Pit stop for ${chosenOption}! Cost: ${(TIME_PIT_STOP_COST/1000).toFixed(1)}s. New tire wear: ${newTireWear}%.`;
                         const lapsRemaining = TOTAL_LAPS - playerStateRef.current.lap;
                         if (playerStateRef.current.position <=3 && lapsRemaining <= 2) positionChange = Math.random() < 0.6 ? 2 : 1; 
                         else if (playerStateRef.current.position < 7 ) positionChange = Math.random() < 0.4 ? 1 : 0; 
-                    } else { 
-                        eventResultMessage = `Staying out on ${choice}! Current tire wear: ${playerStateRef.current.tireWear}%. Gambling on track position.`;
+                    } else { // "Stay Out"
+                        eventResultMessage = `Staying out on ${chosenOption}! Current tire wear: ${playerStateRef.current.tireWear}%. Gambling on track position.`;
                         if (playerStateRef.current.tireWear > 75) timeDelta += 2500; 
                     }
                     break;
@@ -468,7 +490,9 @@ export function useRaceStrategyLogic() {
         }
     }
     
-    const newCalculatedPosition = currentPhase === "qualifying_lap" ? playerStateRef.current.position : Math.max(1, playerStateRef.current.position + positionChange);
+    const newCalculatedPosition = currentPhase === "qualifying_lap" 
+        ? playerStateRef.current.position // Position doesn't change in quali QTEs
+        : Math.max(1, playerStateRef.current.position + positionChange);
 
     setPlayerState(prev => ({
       ...prev,
@@ -478,13 +502,15 @@ export function useRaceStrategyLogic() {
       lastEventMessage: eventResultMessage,
     }));
     
+    currentEventIndexRef.current++; // Increment after handling the current QTE/decision
+
     eventTimeoutRef.current = setTimeout(() => {
         if (gameStateRef.current !== 'finished' && gameStateRef.current !== 'calculating_results') {
             if (processNextEventRef.current) processNextEventRef.current();
         }
-    }, 1800);
+    }, 1800); // Delay to show event result message
 
-  }, [currentEvent, playSound, clearTimers, playerStateRef, gameStateRef, QUALIFYING_EVENTS_CONFIG, RACE_EVENTS_CONFIG, generateDynamicEventTexts, setPlayerState]);
+  }, [currentEvent, playSound, clearTimers]);
 
 
   const processNextEventInternal = useCallback(() => {
@@ -496,41 +522,25 @@ export function useRaceStrategyLogic() {
     const isQualifying = currentPhase === 'qualifying_lap';
     const eventsConfig = isQualifying ? QUALIFYING_EVENTS_CONFIG : RACE_EVENTS_CONFIG;
     
-    if (!isQualifying && currentEventIndexRef.current > 0) {
-        const prevEventConfig = RACE_EVENTS_CONFIG[currentEventIndexRef.current -1]; 
-        const nextEventPotential = RACE_EVENTS_CONFIG[currentEventIndexRef.current];
-
-        if ( (nextEventPotential && prevEventConfig.lap < nextEventPotential.lap) || (currentEventIndexRef.current === 0 && !isQualifying) || (currentEventIndexRef.current === RACE_EVENTS_CONFIG.findIndex(e=>e.type === 'start_qte') +1) ){
-             if (completedLapRef.current < prevEventConfig.lap && prevEventConfig.lap > 0) { 
-                setPlayerState(prev => {
-                    let lapTimeAddition = PLAYER_BASE_LAP_TIME_MS;
-                    lapTimeAddition += prev.tireWear * TIRE_WEAR_TIME_PENALTY_FACTOR;
-                    return {
-                        ...prev,
-                        playerTimeMs: prev.playerTimeMs + lapTimeAddition,
-                        tireWear: Math.min(100, prev.tireWear + TIRE_WEAR_PER_LAP),
-                    };
-                });
-                completedLapRef.current = prevEventConfig.lap;
-             }
-        }
-    }
-
+    // Handle end of qualifying or race
     if (currentEventIndexRef.current >= eventsConfig.length) {
         if (isQualifying) {
             calculateQualifyingResults();
-        } else { 
-            setPlayerState(prev => {
-                let finalLapTimeAddition = PLAYER_BASE_LAP_TIME_MS;
-                finalLapTimeAddition += prev.tireWear * TIRE_WEAR_TIME_PENALTY_FACTOR;
-                const finalTireWear = Math.min(100, prev.tireWear + (completedLapRef.current < TOTAL_LAPS ? TIRE_WEAR_PER_LAP : 0));
-                return {
-                    ...prev,
-                    playerTimeMs: prev.playerTimeMs + finalLapTimeAddition,
-                    tireWear: finalTireWear,
-                    lap: TOTAL_LAPS 
-                };
-            });
+        } else { // End of race
+            // Add time for the final lap if not yet accounted for
+            if (completedLapTimeCalcRef.current < TOTAL_LAPS) {
+                 setPlayerState(prev => {
+                    let lapTime = PLAYER_BASE_LAP_TIME_MS;
+                    lapTime += prev.tireWear * TIRE_WEAR_TIME_PENALTY_FACTOR;
+                    return {
+                        ...prev,
+                        playerTimeMs: prev.playerTimeMs + lapTime,
+                        tireWear: Math.min(100, prev.tireWear + TIRE_WEAR_PER_LAP),
+                        lap: TOTAL_LAPS // Ensure lap is set to final
+                    };
+                });
+                completedLapTimeCalcRef.current = TOTAL_LAPS;
+            }
             setGameState("calculating_results");
             eventTimeoutRef.current = setTimeout(endRace, 1500);
         }
@@ -538,29 +548,61 @@ export function useRaceStrategyLogic() {
     }
     
     const baseEventConfig = eventsConfig[currentEventIndexRef.current];
+    
+    // Lap progression and time/wear accounting for race phase
+    if (!isQualifying) {
+        const lapOfThisEvent = baseEventConfig.lap;
+        // If this event starts a new lap whose time hasn't been accounted for yet
+        if (lapOfThisEvent > completedLapTimeCalcRef.current) {
+            for (let lapToAccount = completedLapTimeCalcRef.current + 1; lapToAccount < lapOfThisEvent; lapToAccount++) {
+                // This loop ensures we account for any laps between the last accounted one and the current event's lap
+                // (e.g. if events for a lap were skipped or didn't exist)
+                 setPlayerState(prev => {
+                    let lapTime = PLAYER_BASE_LAP_TIME_MS;
+                    lapTime += prev.tireWear * TIRE_WEAR_TIME_PENALTY_FACTOR; // Use wear before this lap's increment
+                    return {
+                        ...prev,
+                        playerTimeMs: prev.playerTimeMs + lapTime,
+                        tireWear: Math.min(100, prev.tireWear + TIRE_WEAR_PER_LAP),
+                    };
+                });
+                completedLapTimeCalcRef.current = lapToAccount;
+            }
+        }
+        // Update player's current lap if this event belongs to a new lap for them
+        if (lapOfThisEvent > playerStateRef.current.lap) {
+            setPlayerState(prev => ({
+                ...prev,
+                lap: lapOfThisEvent,
+                lastEventMessage: `Starting Lap ${lapOfThisEvent}...`
+            }));
+        }
+    }
+
     const dynamicTexts = generateDynamicEventTexts(baseEventConfig, playerStateRef.current.position);
     const fullEvent: RaceEvent = { ...baseEventConfig, ...dynamicTexts };
-    
     setCurrentEvent(fullEvent);
 
-    if (!isQualifying) {
-      setPlayerState(prev => ({ ...prev, lap: fullEvent.lap, lastEventMessage: null }));
-      setGameState("lap_transition"); 
+    // Set game state for event display (lap_transition for race, or active for qualifying/event)
+    if (!isQualifying && playerStateRef.current.lastEventMessage && playerStateRef.current.lastEventMessage.startsWith("Starting Lap")) {
+        setGameState("lap_transition"); 
     } else {
-      setPlayerState(prev => ({ ...prev, lastEventMessage: null }));
+        setGameState(isQualifying ? "qualifying_lap" : "event_active");
     }
+    
+    const displayDelay = (gameStateRef.current === "lap_transition" || (isQualifying && currentEventIndexRef.current === 0)) ? 1500 : 800;
 
     eventTimeoutRef.current = setTimeout(() => {
       if (gameStateRef.current === 'finished' || gameStateRef.current === 'calculating_results') return;
       
       if (fullEvent.type === 'message_only') {
         setPlayerState(prev => ({...prev, lastEventMessage: fullEvent.successMessage || prev.lastEventMessage}));
-        currentEventIndexRef.current++; 
+        currentEventIndexRef.current++; // Advance after message displayed
         if (processNextEventRef.current) {
-            eventTimeoutRef.current = setTimeout(processNextEventRef.current, 2000);
+            eventTimeoutRef.current = setTimeout(processNextEventRef.current, 1200); // Shorter delay for message_only
         }
       } else {
-        setGameState(isQualifying ? "qualifying_lap" : "event_active");
+        setGameState(isQualifying ? "qualifying_lap" : "event_active"); // Ensure correct active state
         playSound('event');
         qteStartRef.current = performance.now();
         setEventTimer(0);
@@ -576,24 +618,19 @@ export function useRaceStrategyLogic() {
             setEventTimer(Math.min(100, (elapsed / fullEvent.qteDurationMs!) * 100));
             if (elapsed >= fullEvent.qteDurationMs!) {
               if(qteIntervalRef.current) clearInterval(qteIntervalRef.current);
+              // Check gameState again because it might have changed due to other actions
               if(gameStateRef.current === (isQualifying ? "qualifying_lap" : "event_active")) {
-                handleEventAction(undefined, true); 
+                handleEventAction(undefined, true); // QTE timed out
               }
             }
           }, 50);
         }
       }
-    }, isQualifying || playerStateRef.current.lastEventMessage?.includes("Starting Lap") || playerStateRef.current.lastEventMessage?.includes("GO!") ? 800 : 1500); 
-
-    if (fullEvent.type !== 'message_only') { 
-       currentEventIndexRef.current++;
-    }
+    }, displayDelay); 
 
   }, [
-      endRace, playSound, clearTimers, generateDynamicEventTexts, 
-      calculateQualifyingResults, handleEventAction, 
-      playerStateRef, gameStateRef, currentEventIndexRef, completedLapRef, QUALIFYING_EVENTS_CONFIG, RACE_EVENTS_CONFIG,
-      setPlayerState, setGameState, setCurrentEvent, setEventTimer // Added state setters
+      calculateQualifyingResults, endRace, handleEventAction, 
+      generateDynamicEventTexts, playSound, clearTimers
     ]);
 
   useEffect(() => {
@@ -604,24 +641,24 @@ export function useRaceStrategyLogic() {
   const startGame = useCallback(async () => {
     clearTimers();
     setPlayerState(INITIAL_PLAYER_STATE); 
-    playerStateRef.current = INITIAL_PLAYER_STATE; 
-    completedLapRef.current = 0;
+    completedLapTimeCalcRef.current = 0;
     setCurrentEvent(null);
     setShowNicknameModal(false);
     currentEventIndexRef.current = 0;
     
     setGameState("qualifying_lap"); 
-    setPlayerState(prev => ({
+    setPlayerState(prev => ({ // Use functional update
         ...prev, 
-        playerTimeMs: QUALIFYING_BASE_TIME_MS, 
+        playerTimeMs: QUALIFYING_BASE_TIME_MS, // Base time for qualifying, QTEs will modify this
         lastEventMessage: "Qualifying Lap: Get Ready!"
     }));
     
-    eventTimeoutRef.current = setTimeout(() => {
-        if (processNextEventRef.current) processNextEventRef.current();
-    }, 1500); 
+    // Initial call to start processing qualifying events
+    if (processNextEventRef.current) {
+        eventTimeoutRef.current = setTimeout(processNextEventRef.current, 1500); // Delay before first quali event
+    }
 
-  }, [clearTimers, playerStateRef, gameStateRef, currentEventIndexRef, completedLapRef, setPlayerState, setGameState, setCurrentEvent, setShowNicknameModal]); 
+  }, [clearTimers]); 
 
   const saveRaceScore = useCallback((nickname: string) => {
     const finalPlayerState = playerStateRef.current; 
@@ -639,7 +676,7 @@ export function useRaceStrategyLogic() {
     localStorage.setItem(RACE_STRATEGY_LEADERBOARD_KEY, JSON.stringify(updatedLeaderboard));
     setShowNicknameModal(false);
     toast({ title: "P1 Time Saved!", description: `Masterclass drive, ${nickname}!` });
-  }, [leaderboard, toast, playerStateRef, setShowNicknameModal, setLeaderboard]);
+  }, [leaderboard, toast]);
 
   return {
     gameState,
