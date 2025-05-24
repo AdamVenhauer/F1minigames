@@ -30,28 +30,29 @@ export type F1TriviaGameState =
 // Types for Race Strategy Challenge
 export type RaceStrategyGameState =
   | "idle"
-  | "countdown" // Initial countdown before race start
-  | "event_active" // An event (QTE, decision) is currently active
-  | "lap_transition" // Brief state showing lap/position updates
-  | "calculating_results" // Brief state after last event before showing final results
-  | "finished"; // Race completed, results shown
+  | "countdown" 
+  | "event_active" 
+  | "lap_transition" 
+  | "calculating_results" 
+  | "finished"; 
 
 export interface PlayerRaceState {
   lap: number;
-  position: number; // Player's current position (e.g., 1 for P1)
-  tireWear: number; // 0-100, 0 is fresh, 100 is worn out
-  playerTimeMs: number; // Player's cumulative time
-  lastEventMessage: string | null; // Feedback from the last event
+  position: number; 
+  tireWear: number; 
+  playerTimeMs: number; 
+  lastEventMessage: string | null;
 }
 
 export interface RaceEvent {
-  id: string; // Unique ID for the event
-  lap: number; // Lap on which this event occurs
-  type: "start_qte" | "overtake_qte" | "defend_qte" | "pit_decision" | "drs_qte";
-  description: string; // Text displayed to the player for the event
-  qteDurationMs?: number; // For timed QTEs, how long the player has to react
-  options?: string[]; // For decision events like pit stop
+  id: string; 
+  lap: number; 
+  type: "start_qte" | "overtake_qte" | "defend_qte" | "pit_decision" | "drs_qte" | "qte_generic" | "message_only";
+  event_subtype?: 'weather_drizzle' | 'mechanical_scare' | 'safety_car_restart'; // For qte_generic
+  description: string; 
+  qteDurationMs?: number; 
+  options?: string[]; 
   successMessage: string;
   failureMessage: string;
-  actionText?: string; // Text for the main action button for this event
+  actionText?: string; 
 }
