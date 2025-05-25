@@ -1,21 +1,22 @@
 
 "use client";
 
-import { useState, useCallback } from 'react';
-import type { SegmentType, PlacedSegment, TrackLayout, TrackAnalysisInput, TrackAnalysisOutput, Rotation, SegmentDefinition } from '@/lib/types';
-// import { analyzeTrackFlow } from '@/ai/flows/analyze-track-flow'; // Placeholder for AI integration
+import { useState, useCallback, useEffect } from 'react';
+import type { SegmentType, PlacedSegment, Rotation, SegmentDefinition, TrackLayout, TrackAnalysisInput, TrackAnalysisOutput } from '@/lib/types';
+import { analyzeTrackFlow } from '@/ai/flows/analyze-track-flow'; // Reverted to alias path
 import { v4 as uuidv4 } from 'uuid';
-
 
 export const AVAILABLE_SEGMENTS: SegmentDefinition[] = [
   { type: 'straight', label: 'Straight' },
   { type: 'corner', label: 'Corner' },
-  // { type: 'chicane_left', label: 'Chicane (L)' }, // Future additions
-  // { type: 'chicane_right', label: 'Chicane (R)' },
+  // Future segment types like 'chicane_left', 'chicane_right' can be added here
 ];
 
-const GRID_COLS = 30;
-const GRID_ROWS = 20;
+export const CELL_SIZE = 30; // Visual size of a grid cell and base segment size
+const GRID_COLS = 30; // Number of columns in the grid
+const GRID_ROWS = 20; // Number of rows in the grid
+const LOCAL_STORAGE_TRACK_PREFIX = "apexSketcherTrack_";
+
 
 export function useApexTrackSketcherLogic() {
   const [placedSegments, setPlacedSegments] = useState<PlacedSegment[]>([]);
@@ -33,35 +34,77 @@ export function useApexTrackSketcherLogic() {
     setCurrentRotation(prevRotation => (prevRotation + 90) % 360 as Rotation);
   }, []);
 
-  const handlePlaceSegment = useCallback((x: number, y: number) => {
-    if (!selectedSegmentType) return; // No segment type selected
-
-    // Check if a segment already exists at this position
-    const existingSegment = placedSegments.find(seg => seg.x === x && seg.y === y);
-    if (existingSegment) {
-      // Option 1: Replace existing segment
-      // Option 2: Prevent placing (current implementation)
-      // console.warn(`Segment already exists at (${x}, ${y}). To replace, first remove.`);
-      // For now, let's allow replacement by filtering out the old one
-      setPlacedSegments(prevSegments => 
-        prevSegments.filter(seg => !(seg.x === x && seg.y === y))
-      );
-    }
+  const handlePlaceSegment = useCallback((centerX: number, centerY: number) => {
+    if (!selectedSegmentType) return;
 
     const newSegment: PlacedSegment = {
       id: uuidv4(),
       type: selectedSegmentType,
-      x,
-      y,
+      x: centerX - CELL_SIZE / 2, // Store top-left based on center
+      y: centerY - CELL_SIZE / 2, // Store top-left based on center
       rotation: currentRotation,
     };
-    setPlacedSegments(prevSegments => [...prevSegments, newSegment]);
+    
+    // Check if a segment already exists at these center coordinates (or very close by)
+    // This simplistic check might need refinement for overlapping segments if desired
+    const proximityThreshold = CELL_SIZE / 2.5; // How close centers need to be to be considered "same spot"
+    const existingSegmentIndex = placedSegments.findIndex(seg => {
+        const segCenterX = seg.x + CELL_SIZE / 2;
+        const segCenterY = seg.y + CELL_SIZE / 2;
+        return Math.abs(segCenterX - centerX) < proximityThreshold && Math.abs(segCenterY - centerY) < proximityThreshold;
+    });
+
+    if (existingSegmentIndex !== -1) {
+        // Replace existing segment
+        setPlacedSegments(prevSegments => {
+            const updatedSegments = [...prevSegments];
+            updatedSegments[existingSegmentIndex] = newSegment;
+            return updatedSegments;
+        });
+    } else {
+        // Add new segment
+        setPlacedSegments(prevSegments => [...prevSegments, newSegment]);
+    }
   }, [selectedSegmentType, currentRotation, placedSegments]);
 
-  const handleRemoveSegment = useCallback((x: number, y: number) => {
-    setPlacedSegments(prevSegments => prevSegments.filter(seg => !(seg.x === x && seg.y === y)));
-  }, []);
-  
+  const handleRemoveSegment = useCallback((clickX: number, clickY: number) => {
+    let segmentToRemoveId: string | null = null;
+
+    // Iterate in reverse to remove the top-most segment if overlapping
+    for (let i = placedSegments.length - 1; i >= 0; i--) {
+      const segment = placedSegments[i];
+      const segCenterX = segment.x + CELL_SIZE / 2;
+      const segCenterY = segment.y + CELL_SIZE / 2;
+
+      // Translate click point to be relative to the segment's center
+      const relX = clickX - segCenterX;
+      const relY = clickY - segCenterY;
+
+      // Inverse rotation: rotate the click point back by the segment's rotation
+      const angleRad = -(segment.rotation * Math.PI) / 180; // Negative angle for inverse
+      const cosAngle = Math.cos(angleRad);
+      const sinAngle = Math.sin(angleRad);
+
+      const rotatedRelX = relX * cosAngle - relY * sinAngle;
+      const rotatedRelY = relX * sinAngle + relY * cosAngle;
+
+      // Check if the un-rotated click point is within the segment's un-rotated bounding box
+      if (
+        rotatedRelX >= -CELL_SIZE / 2 &&
+        rotatedRelX <= CELL_SIZE / 2 &&
+        rotatedRelY >= -CELL_SIZE / 2 &&
+        rotatedRelY <= CELL_SIZE / 2
+      ) {
+        segmentToRemoveId = segment.id;
+        break; // Found the segment to remove
+      }
+    }
+
+    if (segmentToRemoveId) {
+      setPlacedSegments(prevSegments => prevSegments.filter(seg => seg.id !== segmentToRemoveId));
+    }
+  }, [placedSegments]);
+
   const handleClearCanvas = useCallback(() => {
     setPlacedSegments([]);
     setAnalysisResult(null);
@@ -75,91 +118,82 @@ export function useApexTrackSketcherLogic() {
     setIsAnalyzing(true);
     setAnalysisResult(null);
 
-    // Prepare data for AI (simplified for now)
-    const simplifiedSegments = placedSegments.map(seg => ({
-      type: seg.type,
-      // We can add more properties like length/radius if we define them for segments
-    }));
+    const numStraights = placedSegments.filter(s => s.type === 'straight').length;
+    const numCorners = placedSegments.filter(s => s.type === 'corner').length;
 
     const input: TrackAnalysisInput = {
-      segments: simplifiedSegments,
-      totalLength: placedSegments.length * 100, // Rough estimate: each segment is 100m
-      turns: placedSegments.filter(seg => seg.type === 'corner').length,
+      trackName,
+      numStraights,
+      numCorners,
+      totalSegments: placedSegments.length,
     };
 
     try {
-      // const result = await analyzeTrackFlow(input); // AI Call placeholder
-      // Mocked result for now:
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
-      const mockResult: TrackAnalysisOutput = {
-        estimatedLapTime: `1:${Math.floor(Math.random() * 20) + 20}.${String(Math.floor(Math.random() * 999)).padStart(3, '0')}`,
-        trackCharacteristics: [
-          `Features ${input.turns} corners.`,
-          `${placedSegments.filter(s => s.type === 'straight').length} straights provide overtaking opportunities.`,
-          `Consider adding more elevation changes for complexity.`
-        ],
-        designFeedback: "This is a promising layout! The balance of straights and corners looks good. Maybe vary corner radii more?",
-      };
-      setAnalysisResult(mockResult);
-    } catch (error) {
+      const result = await analyzeTrackFlow(input);
+      setAnalysisResult(result);
+    } catch (error: any) {
       console.error("Error analyzing track:", error);
-      alert("Failed to analyze track. See console for details.");
-      setAnalysisResult({ // Mock error result
-        estimatedLapTime: "N/A",
-        trackCharacteristics: ["Error during analysis."],
-        designFeedback: "Could not analyze track.",
+      let errorMessage = "Failed to analyze track. See console for details.";
+       if (error.message && (error.message.includes('GEMINI_API_KEY') || error.message.includes('GOOGLE_API_KEY') || error.code === 'FAILED_PRECONDITION')) {
+        errorMessage = "AI Analysis Error: API Key is missing, invalid, or has insufficient quota. Please check your environment configuration and Google Cloud project.";
+      } else if (error.message) {
+        errorMessage = `AI Analysis Error: ${error.message}`;
+      }
+      setAnalysisResult({
+        estimatedLapTime: "Error",
+        trackCharacteristics: [errorMessage],
+        designFeedback: "Could not complete analysis.",
       });
     } finally {
       setIsAnalyzing(false);
     }
-  }, [placedSegments]);
-
-  // Save and Load logic (localStorage)
-  const handleSaveTrack = useCallback(() => {
-    if (placedSegments.length === 0) {
-      alert("Track is empty, nothing to save.");
-      return;
-    }
-    const trackLayout: TrackLayout = { placedSegments };
-    localStorage.setItem(trackName, JSON.stringify(trackLayout));
-    alert(`Track "${trackName}" saved!`);
   }, [placedSegments, trackName]);
 
-  const handleLoadTrack = useCallback((name: string) => {
-    const savedTrack = localStorage.getItem(name);
-    if (savedTrack) {
+  const handleSaveTrack = useCallback(() => {
+    if (!trackName.trim()) {
+      alert("Please enter a track name to save.");
+      return;
+    }
+    const trackLayout: TrackLayout = { trackName: trackName.trim(), placedSegments };
+    try {
+      localStorage.setItem(LOCAL_STORAGE_TRACK_PREFIX + trackName.trim(), JSON.stringify(trackLayout));
+      alert(`Track "${trackName.trim()}" saved!`);
+    } catch (e) {
+      alert("Failed to save track. Local storage might be full or disabled.");
+      console.error("Error saving track:", e);
+    }
+  }, [placedSegments, trackName]);
+
+  const handleLoadTrack = useCallback((nameToLoad: string) => {
+    const savedTrackJSON = localStorage.getItem(LOCAL_STORAGE_TRACK_PREFIX + nameToLoad);
+    if (savedTrackJSON) {
       try {
-        const trackLayout: TrackLayout = JSON.parse(savedTrack);
+        const trackLayout: TrackLayout = JSON.parse(savedTrackJSON);
         setPlacedSegments(trackLayout.placedSegments || []);
-        setTrackName(name);
-        setAnalysisResult(null); // Clear previous analysis
-        alert(`Track "${name}" loaded!`);
+        setTrackName(trackLayout.trackName || nameToLoad);
+        setAnalysisResult(null); 
+        alert(`Track "${trackLayout.trackName || nameToLoad}" loaded!`);
       } catch (e) {
         alert("Failed to load track. Data might be corrupted.");
         console.error("Error loading track:", e);
       }
     } else {
-      alert(`No track found with name "${name}".`);
+      alert(`No track found with name "${nameToLoad}".`);
     }
   }, []);
 
-  // Placeholder for saved track names, would ideally list keys from localStorage
-  const getSavedTrackNames = () => {
-    // This is a simplified way. A more robust method would iterate localStorage keys
-    // and filter for those that seem like track saves.
-    const names = [];
-    for(let i=0; i<localStorage.length; i++) {
-      const key = localStorage.key(i);
-      // Add a prefix or some other way to identify track saves if you have other items in localStorage
-      if(key && key.startsWith("Track_")) { // Assuming tracks are saved with a prefix
-         names.push(key);
-      } else if (key === "My Custom Track" || key === "Monza_Remix" || key === "Spa_Short") { // Example fixed names
-         names.push(key);
+  const getSavedTrackNames = useCallback(() => {
+    const names: string[] = [];
+    if (typeof window !== 'undefined') {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(LOCAL_STORAGE_TRACK_PREFIX)) {
+          names.push(key.replace(LOCAL_STORAGE_TRACK_PREFIX, ""));
+        }
       }
     }
-    // For now, just returning a few examples or what might be manually saved
-    return Array.from(new Set([...names, "My Custom Track", "Monza_Remix", "Spa_Short"])).slice(0,5);
-  };
+    return names.sort();
+  }, []);
 
 
   return {
@@ -170,8 +204,9 @@ export function useApexTrackSketcherLogic() {
     setTrackName,
     analysisResult,
     isAnalyzing,
-    GRID_COLS,
-    GRID_ROWS,
+    GRID_COLS, // Export for canvas dimensions
+    GRID_ROWS,  // Export for canvas dimensions
+    CELL_SIZE,  // Export for canvas cell size reference
     availableSegmentTypes: AVAILABLE_SEGMENTS,
     handleSelectSegmentType,
     handleRotatePreviewSegment,
