@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState } from "react";
 import {
   Accordion,
   AccordionContent,
@@ -9,7 +10,11 @@ import {
 } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { BookOpen, History, Car, Flag, Users, Trophy, MapPin } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { BookOpen, History, Car, Flag, Users, Trophy, MapPin, Search, Loader2 } from 'lucide-react';
+import { queryF1Expert, type F1QueryInput, type F1QueryOutput } from "@/ai/flows/f1-query-flow";
 
 interface WikiSection {
   id: string;
@@ -143,10 +148,10 @@ const wikiSections: WikiSection[] = [
           Formula 1's history is rich with legendary drivers and iconic teams that have left an indelible mark on the sport.
         </p>
         <p>
-          <strong>Legendary Drivers:</strong> Figures like Juan Manuel Fangio (5 championships in the 1950s), Jim Clark (dominant in the 60s), Jackie Stewart (3-time champion and safety advocate), Niki Lauda (champion with Ferrari and McLaren), Alain Prost ("The Professor", 4-time champion), Ayrton Senna (charismatic 3-time champion), Michael Schumacher (record 7 championships), and Lewis Hamilton (also 7 championships) are just a few names that resonate with F1 fans worldwide. Each brought unique skill, determination, and personality to the pinnacle of motorsport.
+          <strong>Legendary Drivers:</strong> Figures like Juan Manuel Fangio (5 championships in the 1950s), Jim Clark (dominant in the 60s), Jackie Stewart (3-time champion and safety advocate), Niki Lauda (champion with Ferrari and McLaren), Alain Prost ("The Professor", 4-time champion), Ayrton Senna (charismatic 3-time champion), Michael Schumacher (record 7 championships), and Lewis Hamilton (also 7 championships) are just a few names that resonate with F1 fans worldwide. Each brought unique skill, determination, and personality to the pinnacle of motorsport. Other notable drivers include Sebastian Vettel, Fernando Alonso, Max Verstappen, Kimi Räikkönen, and Gilles Villeneuve.
         </p>
         <p>
-          <strong>Iconic Teams:</strong> Ferrari, with its passionate Tifosi and rich heritage, is the oldest and most successful team in F1 history. McLaren and Williams are other British powerhouses with numerous championships. Lotus innovated greatly in aerodynamics and car design. Mercedes has dominated the hybrid era. Red Bull Racing has also achieved multiple championships with innovative designs.
+          <strong>Iconic Teams:</strong> Ferrari, with its passionate Tifosi and rich heritage, is the oldest and most successful team in F1 history. McLaren and Williams are other British powerhouses with numerous championships. Lotus innovated greatly in aerodynamics and car design. Mercedes has dominated the hybrid era. Red Bull Racing has also achieved multiple championships with innovative designs. Other notable teams include Brabham, Renault/Alpine, and Benetton.
         </p>
       </div>
     ),
@@ -162,12 +167,14 @@ const wikiSections: WikiSection[] = [
         </p>
         <ul className="list-disc list-inside ml-4 space-y-1">
             <li><strong>Monaco:</strong> The jewel in the F1 crown, a tight, twisting street circuit demanding ultimate precision.</li>
-            <li><strong>Silverstone (UK):</strong> The host of the first F1 World Championship race, known for its high-speed corners.</li>
+            <li><strong>Silverstone (UK):</strong> The host of the first F1 World Championship race, known for its high-speed corners like Maggotts, Becketts, and Chapel.</li>
             <li><strong>Monza (Italy):</strong> The "Temple of Speed," famous for its long straights and passionate Ferrari fans (the Tifosi).</li>
             <li><strong>Spa-Francorchamps (Belgium):</strong> A driver favorite, featuring the daunting Eau Rouge/Raidillon sequence and unpredictable weather.</li>
-            <li><strong>Suzuka (Japan):</strong> A challenging figure-eight layout, highly regarded by drivers.</li>
-            <li><strong>Interlagos (Brazil):</strong> Known for its passionate crowd and dramatic races, often affected by weather.</li>
-            <li><strong>Nürburgring Nordschleife (Germany - historic):</strong> The "Green Hell," though no longer used for F1 due to safety, it remains legendary.</li>
+            <li><strong>Suzuka (Japan):</strong> A challenging figure-eight layout, highly regarded by drivers for its 'S' Curves and 130R.</li>
+            <li><strong>Interlagos (Brazil):</strong> Known for its passionate crowd and dramatic races, often affected by weather, officially Autódromo José Carlos Pace.</li>
+            <li><strong>Nürburgring Nordschleife (Germany - historic):</strong> The "Green Hell," though no longer used for F1 due to safety, it remains legendary for its length and difficulty.</li>
+            <li><strong>Imola (Italy):</strong> The Autodromo Internazionale Enzo e Dino Ferrari, a historic and challenging track.</li>
+            <li><strong>Circuit Gilles Villeneuve (Canada):</strong> Known for the "Wall of Champions."</li>
         </ul>
       </div>
     ),
@@ -175,6 +182,29 @@ const wikiSections: WikiSection[] = [
 ];
 
 export function F1WikiPage() {
+  const [userQuery, setUserQuery] = useState("");
+  const [searchResult, setSearchResult] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSearch = async () => {
+    if (!userQuery.trim()) return;
+    setIsLoading(true);
+    setSearchResult(null);
+    setError(null);
+    try {
+      const input: F1QueryInput = { userQuery };
+      const result: F1QueryOutput = await queryF1Expert(input);
+      setSearchResult(result.answer);
+    } catch (err) {
+      console.error("Error querying F1 expert:", err);
+      setError("Sorry, something went wrong while fetching the answer. Please try again.");
+      setSearchResult(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center p-4 text-left w-full">
       <Card className="w-full max-w-4xl shadow-2xl bg-card/80 backdrop-blur-sm">
@@ -183,10 +213,47 @@ export function F1WikiPage() {
             <BookOpen className="w-10 h-10 mr-3 text-primary" />
             <CardTitle className="text-4xl font-bold">Formula 1 Wiki</CardTitle>
           </div>
-          <CardDescription>Explore the world of Formula 1.</CardDescription>
+          <CardDescription>Explore the world of Formula 1 or ask the AI expert.</CardDescription>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="h-[calc(100vh-var(--header-height,120px)-var(--footer-height,100px)-150px)] pr-4"> {/* Adjust height as needed */}
+          <div className="mb-8 p-4 border border-border rounded-lg bg-muted/30 shadow">
+            <Label htmlFor="f1Query" className="text-lg font-semibold text-foreground mb-2 block">
+              Ask anything about Formula 1:
+            </Label>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Input
+                id="f1Query"
+                type="text"
+                value={userQuery}
+                onChange={(e) => setUserQuery(e.target.value)}
+                placeholder="e.g., Who won the 1976 F1 championship?"
+                className="flex-grow"
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              />
+              <Button onClick={handleSearch} disabled={isLoading || !userQuery.trim()} className="w-full sm:w-auto">
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Searching...
+                  </>
+                ) : (
+                  <>
+                    <Search className="mr-2 h-4 w-4" /> Ask the F1 Expert
+                  </>
+                )}
+              </Button>
+            </div>
+            {error && <p className="text-destructive mt-3 text-sm">{error}</p>}
+            {searchResult && (
+              <div className="mt-6 p-4 bg-background/70 rounded-md shadow prose prose-sm dark:prose-invert max-w-none">
+                <h3 className="text-xl font-semibold text-primary mb-2">Expert Answer:</h3>
+                <p className="whitespace-pre-wrap">{searchResult}</p>
+              </div>
+            )}
+          </div>
+
+          <h3 className="text-2xl font-semibold text-center mb-4 text-primary">General F1 Topics</h3>
+          <ScrollArea className="h-[calc(100vh-var(--header-height,120px)-var(--footer-height,100px)-400px)] pr-4"> {/* Adjust height as needed */}
             <Accordion type="single" collapsible className="w-full">
               {wikiSections.map((section) => (
                 <AccordionItem value={section.id} key={section.id}>
