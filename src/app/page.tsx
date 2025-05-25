@@ -7,13 +7,14 @@ import { GearShiftChallenge } from "@/components/game/GearShiftChallenge";
 import { F1TriviaChallenge } from "@/components/game/F1TriviaChallenge";
 import { RaceStrategyChallenge } from "@/components/game/RaceStrategyChallenge";
 import { ReflexTilesChallenge } from "@/components/game/ReflexTilesChallenge";
+import ApexTrackSketcherPage from "@/components/game/ApexTrackSketcher"; // Added import
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Zap, Wrench, Gauge, Brain, Rocket, Settings, LayoutGrid } from 'lucide-react';
+import { ArrowLeft, Zap, Wrench, Gauge, Brain, Rocket, Settings, LayoutGrid, DraftingCompass } from 'lucide-react'; // Added DraftingCompass
 import { SettingsDialog } from '@/components/layout/SettingsDialog';
 import { Analytics } from "@vercel/analytics/next"
 
-type GameKey = 'menu' | 'reflex' | 'pitstop' | 'gearshift' | 'trivia' | 'race_strategy' | 'reflex_tiles';
+type GameKey = 'menu' | 'reflex' | 'pitstop' | 'gearshift' | 'trivia' | 'race_strategy' | 'reflex_tiles' | 'track_sketcher'; // Added track_sketcher
 
 interface GameCardProps {
   title: string;
@@ -63,6 +64,8 @@ export default function HomePage() {
         return <RaceStrategyChallenge />;
       case 'reflex_tiles':
         return <ReflexTilesChallenge />;
+      case 'track_sketcher': // Added case
+        return <ApexTrackSketcherPage />;
       default:
         return null;
     }
@@ -139,6 +142,12 @@ export default function HomePage() {
           icon={<LayoutGrid className="w-10 h-10 text-accent" />}
           onClick={() => setSelectedGame('reflex_tiles')}
         />
+        <GameSelectionCard 
+          title="Apex Track Sketcher"
+          description="Design your own F1 circuit."
+          icon={<DraftingCompass className="w-10 h-10 text-accent" />}
+          onClick={() => setSelectedGame('track_sketcher')}
+        />
       </div>
       <SettingsDialog isOpen={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
       <style jsx global>{`
@@ -147,10 +156,9 @@ export default function HomePage() {
         }
         body {
           background:
-            linear-gradient(rgba(21, 23, 29, 0.70), rgba(21, 23, 29, 0.70)), /* Adjusted overlay opacity */
-            url('https://images.hdqwalls.com/download/f1-cars-racing-digital-art-4k-2n-1920x1080.jpg') no-repeat center center fixed;
+            linear-gradient(rgba(21, 23, 29, 0.70), rgba(21, 23, 29, 0.70)),
+            url('https://placehold.co/1920x1080.png') no-repeat center center fixed; /* data-ai-hint: f1 art */
           background-size: cover;
-          /* data-ai-hint: f1 art */
         }
       `}</style>
     </div>
