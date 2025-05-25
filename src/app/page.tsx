@@ -7,14 +7,15 @@ import { GearShiftChallenge } from "@/components/game/GearShiftChallenge";
 import { F1TriviaChallenge } from "@/components/game/F1TriviaChallenge";
 import { RaceStrategyChallenge } from "@/components/game/RaceStrategyChallenge";
 import { ReflexTilesChallenge } from "@/components/game/ReflexTilesChallenge";
-import ApexTrackSketcherPage from "@/components/game/ApexTrackSketcher"; // Added import
+import ApexTrackSketcherPage from "@/components/game/ApexTrackSketcher";
+import { F1WikiPage } from "@/components/wiki/F1WikiPage"; // Added import
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Zap, Wrench, Gauge, Brain, Rocket, Settings, LayoutGrid, DraftingCompass } from 'lucide-react'; // Added DraftingCompass
+import { ArrowLeft, Zap, Wrench, Gauge, Brain, Rocket, Settings, LayoutGrid, DraftingCompass, BookOpen } from 'lucide-react'; // Added BookOpen
 import { SettingsDialog } from '@/components/layout/SettingsDialog';
 import { Analytics } from "@vercel/analytics/next"
 
-type GameKey = 'menu' | 'reflex' | 'pitstop' | 'gearshift' | 'trivia' | 'race_strategy' | 'reflex_tiles' | 'track_sketcher'; // Added track_sketcher
+type GameKey = 'menu' | 'reflex' | 'pitstop' | 'gearshift' | 'trivia' | 'race_strategy' | 'reflex_tiles' | 'track_sketcher' | 'wiki'; // Added wiki
 
 interface GameCardProps {
   title: string;
@@ -40,7 +41,7 @@ function GameSelectionCard({ title, description, icon, onClick }: GameCardProps)
         </div>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-muted-foreground">Click to play!</p>
+        <p className="text-sm text-muted-foreground">Click to explore!</p>
       </CardContent>
     </Card>
   );
@@ -64,8 +65,10 @@ export default function HomePage() {
         return <RaceStrategyChallenge />;
       case 'reflex_tiles':
         return <ReflexTilesChallenge />;
-      case 'track_sketcher': // Added case
+      case 'track_sketcher':
         return <ApexTrackSketcherPage />;
+      case 'wiki': // Added case
+        return <F1WikiPage />;
       default:
         return null;
     }
@@ -76,7 +79,7 @@ export default function HomePage() {
       <div className="p-4 md:p-8">
         <div className="flex justify-between items-center mb-6">
           <Button onClick={() => setSelectedGame('menu')} variant="outline" className="shadow-md">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Games
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Menu
           </Button>
           <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)} className="shadow-md" aria-label="Open Settings">
             <Settings className="h-6 w-6 text-primary" />
@@ -94,7 +97,7 @@ export default function HomePage() {
         <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-primary">
           Apex Start Arena
         </h1>
-        <p className="text-xl md:text-2xl text-muted-foreground mt-2">Choose Your F1 Challenge!</p>
+        <p className="text-xl md:text-2xl text-muted-foreground mt-2">Choose Your F1 Challenge or Explore the Wiki!</p>
         <Button
           variant="ghost"
           size="icon"
@@ -148,6 +151,12 @@ export default function HomePage() {
           icon={<DraftingCompass className="w-10 h-10 text-accent" />}
           onClick={() => setSelectedGame('track_sketcher')}
         />
+        <GameSelectionCard
+          title="F1 Wiki"
+          description="Explore information about Formula 1."
+          icon={<BookOpen className="w-10 h-10 text-accent" />}
+          onClick={() => setSelectedGame('wiki')}
+        />
       </div>
       <SettingsDialog isOpen={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
       <style jsx global>{`
@@ -157,7 +166,7 @@ export default function HomePage() {
         body {
           background:
             linear-gradient(rgba(21, 23, 29, 0.70), rgba(21, 23, 29, 0.70)),
-            url('https://placehold.co/1920x1080.png') no-repeat center center fixed; /* data-ai-hint: f1 art */
+            url('https://images.hdqwalls.com/download/f1-cars-racing-digital-art-4k-2n-1920x1080.jpg') no-repeat center center fixed; /* data-ai-hint: f1 art */
           background-size: cover;
         }
       `}</style>
