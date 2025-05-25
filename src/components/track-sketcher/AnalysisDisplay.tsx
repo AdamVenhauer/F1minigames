@@ -9,9 +9,9 @@ import { Lightbulb, Clock, ListChecks, CircleCheck, CircleAlert, Play, Timer } f
 interface AnalysisDisplayProps {
   analysisResult: TrackAnalysisOutput | null;
   isAnalyzing: boolean;
-  isSimulating: boolean;      // New prop
-  simulatedTime: number;      // New prop
-  formatTime: (ms: number) => string; // New prop
+  isSimulating: boolean;
+  simulatedTime: number;
+  formatTime: (ms: number) => string;
 }
 
 export function AnalysisDisplay({
@@ -39,6 +39,31 @@ export function AnalysisDisplay({
     );
   }
   
+  // Show simulation results if simulation just finished
+  if (!isSimulating && simulatedTime > 0 && !isAnalyzing && !analysisResult) { // If sim just ended, analysisResult might be null
+    return (
+      <Card className="w-full shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center">
+            <Clock className="w-5 h-5 mr-2 text-green-500" /> Lap Simulation Complete!
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-4">
+            <p className="text-3xl font-bold text-primary">{formatTime(simulatedTime)}</p>
+            <p className="text-sm text-muted-foreground">Final Simulated Lap Time</p>
+          </div>
+        </CardContent>
+        <CardFooter>
+            <p className="text-xs text-muted-foreground">
+                Click "Analyze Track" for detailed characteristics or simulate again.
+            </p>
+        </CardFooter>
+      </Card>
+    );
+  }
+
+
   if (isAnalyzing) {
     return (
       <Card className="w-full shadow-lg">
@@ -65,13 +90,15 @@ export function AnalysisDisplay({
         <CardContent>
           <p className="text-sm text-muted-foreground">
             Design your track and click "Analyze Track" to get calculated insights and lap time estimations.
-            A minimum of 4 segments are usually needed for a valid track.
+            A minimum of {MIN_SEGMENTS_FOR_LOOP} segments are usually needed for a valid track.
+            You can also simulate a lap on an analyzed closed track.
           </p>
         </CardContent>
       </Card>
     );
   }
 
+  // Regular analysis display
   const isLapTimeAvailable = analysisResult.estimatedLapTime && !analysisResult.estimatedLapTime.toLowerCase().includes("n/a");
 
   return (
@@ -79,7 +106,7 @@ export function AnalysisDisplay({
       <CardHeader>
         <CardTitle className="text-xl flex items-center">
           <Lightbulb className="w-5 h-5 mr-2 text-accent" /> 
-          {analysisResult.estimatedLapTime.startsWith("Error") ? "Analysis Error" : "Track Analysis Complete"}
+          {analysisResult.estimatedLapTime.startsWith("Error") || analysisResult.estimatedLapTime.startsWith("N/A") ? "Analysis Information" : "Track Analysis Complete"}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -140,4 +167,5 @@ export function AnalysisDisplay({
   );
 }
 
-    
+// Expose MIN_SEGMENTS_FOR_LOOP for use in the component if needed for messages
+export const MIN_SEGMENTS_FOR_LOOP = 4; 
