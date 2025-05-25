@@ -3,23 +3,26 @@
 
 import type { PlacedSegment, SegmentType, Rotation } from '@/lib/types';
 import React, { useRef, useState, useEffect } from 'react';
-import { CELL_SIZE } from '@/hooks/useApexTrackSketcherLogic'; // Import CELL_SIZE
+import { CELL_SIZE } from '@/hooks/useApexTrackSketcherLogic';
 
 interface TrackCanvasProps {
-  gridCols: number; // Now used for initial canvas dimensions, not snapping
-  gridRows: number; // Now used for initial canvas dimensions, not snapping
+  gridCols: number;
+  gridRows: number;
   placedSegments: PlacedSegment[];
   onPlaceSegment: (centerX: number, centerY: number) => void;
   onRemoveSegment: (clickX: number, clickY: number) => void;
   selectedSegmentType: SegmentType | null;
   currentRotation: Rotation;
+  isSimulating: boolean;
+  simulationCarPosition: { x: number; y: number } | null;
+  simulationCarRotation: number;
 }
 
 const SegmentVisual = ({ segment, isPreview }: { segment: PlacedSegment, isPreview?: boolean }) => {
   const style: React.CSSProperties = {
     position: 'absolute',
-    left: segment.x, // top-left x
-    top: segment.y,  // top-left y
+    left: segment.x,
+    top: segment.y,
     width: CELL_SIZE,
     height: CELL_SIZE,
     transform: `rotate(${segment.rotation}deg)`,
@@ -28,7 +31,7 @@ const SegmentVisual = ({ segment, isPreview }: { segment: PlacedSegment, isPrevi
     alignItems: 'center',
     justifyContent: 'center',
     opacity: isPreview ? 0.6 : 1,
-    pointerEvents: 'none', // Important for preview so it doesn't block clicks
+    pointerEvents: 'none',
   };
 
   const svgStyle: React.SVGAttributes<SVGSVGElement> = {
@@ -88,6 +91,9 @@ export function TrackCanvas({
   onRemoveSegment,
   selectedSegmentType,
   currentRotation,
+  isSimulating,
+  simulationCarPosition,
+  simulationCarRotation,
 }: TrackCanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
@@ -100,7 +106,7 @@ export function TrackCanvas({
     const rect = canvasRef.current.getBoundingClientRect();
     const clickX = event.clientX - rect.left;
     const clickY = event.clientY - rect.top;
-    onPlaceSegment(clickX, clickY); // Pass raw coords (center of new segment)
+    onPlaceSegment(clickX, clickY);
   };
 
   const handleCanvasContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -126,7 +132,7 @@ export function TrackCanvas({
   };
 
   const gridStyle: React.CSSProperties = {
-    display: 'grid', // Still useful for the background grid lines
+    display: 'grid',
     gridTemplateColumns: `repeat(${gridCols}, ${CELL_SIZE}px)`,
     gridTemplateRows: `repeat(${gridRows}, ${CELL_SIZE}px)`,
     width: canvasWidth,
@@ -135,13 +141,14 @@ export function TrackCanvas({
     position: 'relative',
     backgroundColor: 'hsl(var(--muted) / 0.3)',
     cursor: 'crosshair',
-    overflow: 'hidden', // Clip segments that go off-canvas
+    overflow: 'hidden',
   };
+
+  const carSize = CELL_SIZE / 3; // Size of the car visual
 
   return (
     <div
       className="overflow-auto max-w-full max-h-[70vh] border rounded-md shadow-inner bg-background flex items-center justify-center"
-      // Style below is for the outer scroll container, making sure it can contain the canvas
       style={{ width: canvasWidth + 4, height: canvasHeight + 4 }} 
     >
       <div
@@ -151,10 +158,9 @@ export function TrackCanvas({
         onContextMenu={handleCanvasContextMenu}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
-        role="application" // More appropriate role for interactive canvas
+        role="application"
         aria-label="Track design canvas"
       >
-        {/* Background Grid Lines */}
         {Array.from({ length: gridRows * gridCols }).map((_, index) => {
           const col = index % gridCols;
           const row = Math.floor(index / gridCols);
@@ -162,36 +168,50 @@ export function TrackCanvas({
             <div
               key={`gridcell-${row}-${col}`}
               className="border-r border-b border-[hsl(var(--border)/0.1)]"
-              style={{
-                gridColumnStart: col + 1,
-                gridRowStart: row + 1,
-              }}
+              style={{ gridColumnStart: col + 1, gridRowStart: row + 1 }}
               aria-hidden="true"
             />
           );
         })}
 
-        {/* Placed Segments */}
         {placedSegments.map((segment) => (
           <SegmentVisual key={segment.id} segment={segment} />
         ))}
 
-        {/* Hover Preview Segment */}
         {mousePosition && selectedSegmentType && (
           <SegmentVisual
             segment={{
               id: 'preview',
               type: selectedSegmentType,
-              x: mousePosition.x - CELL_SIZE / 2, // Position top-left for preview
-              y: mousePosition.y - CELL_SIZE / 2, // Position top-left for preview
+              x: mousePosition.x - CELL_SIZE / 2,
+              y: mousePosition.y - CELL_SIZE / 2,
               rotation: currentRotation,
             }}
             isPreview
           />
         )}
+
+        {isSimulating && simulationCarPosition && (
+          <div
+            style={{
+              position: 'absolute',
+              left: simulationCarPosition.x - carSize / 2, // Adjust for car's own center if SVG isn't drawn around 0,0
+              top: simulationCarPosition.y - carSize / 2,  // Adjust for car's own center
+              width: carSize,
+              height: carSize,
+              transform: `rotate(${simulationCarRotation}deg)`,
+              transformOrigin: 'center center',
+              transition: 'left 0.05s linear, top 0.05s linear', // Optional: for smoother visual updates if React batches
+            }}
+            aria-label="Simulation car"
+          >
+            <svg width={carSize} height={carSize} viewBox={`-${carSize/1.5} -${carSize/2} ${carSize*1.5} ${carSize}`} fill="hsl(var(--destructive))" >
+              {/* Simple triangle pointing right (0 degrees) */}
+              <path d={`M${carSize*0.6} 0 L-${carSize*0.3} -${carSize*0.3} L-${carSize*0.3} ${carSize*0.3} Z`} />
+            </svg>
+          </div>
+        )}
       </div>
     </div>
   );
 }
-
-    
