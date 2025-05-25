@@ -2,23 +2,22 @@
 "use client";
 
 import type { PlacedSegment, SegmentType, Rotation } from '@/lib/types';
-import React, { useRef, useEffect } from 'react';
-import { cn } from '@/lib/utils';
+import React, { useRef } from 'react'; // Removed useEffect as it's not used
 
 interface TrackCanvasProps {
   gridCols: number;
   gridRows: number;
   placedSegments: PlacedSegment[];
   onPlaceSegment: (x: number, y: number) => void;
-  onRemoveSegment: (x: number, y: number) => void; // Added for right-click removal
+  onRemoveSegment: (x: number, y: number) => void;
   cellSize?: number;
-  selectedSegmentType: SegmentType | null; // For preview/hover
-  currentRotation: Rotation; // For preview/hover
+  selectedSegmentType: SegmentType | null;
+  currentRotation: Rotation;
 }
 
 const CELL_SIZE_DEFAULT = 30; // px
 
-const SegmentVisual = ({ segment, cellSize }: { segment: PlacedSegment, cellSize: number }) => {
+const SegmentVisual = ({ segment, cellSize, isPreview }: { segment: PlacedSegment, cellSize: number, isPreview?: boolean }) => {
   const style: React.CSSProperties = {
     position: 'absolute',
     left: segment.x * cellSize,
@@ -30,35 +29,48 @@ const SegmentVisual = ({ segment, cellSize }: { segment: PlacedSegment, cellSize
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    border: '1px dashed rgba(255,255,255,0.1)', // For visual debugging of cell
+    opacity: isPreview ? 0.6 : 1,
+    // border: '1px dashed rgba(255,255,255,0.1)', // For visual debugging
   };
 
   const svgStyle: React.SVGAttributes<SVGSVGElement> = {
     width: '100%',
     height: '100%',
-    overflow: 'visible', // Allow strokes to go outside the box slightly
+    overflow: 'visible',
   };
 
   const strokeColor = "hsl(var(--primary))";
-  const strokeWidth = Math.max(2, cellSize / 10);
-
+  const trackStrokeWidth = Math.max(4, cellSize / 3.5); // Increased thickness
+  const radius = cellSize / 2;
 
   switch (segment.type) {
     case 'straight':
       return (
         <div style={style}>
           <svg {...svgStyle}>
-            <line x1="0" y1={cellSize / 2} x2={cellSize} y2={cellSize / 2} stroke={strokeColor} strokeWidth={strokeWidth} />
+            <line
+              x1="0"
+              y1={radius}
+              x2={cellSize}
+              y2={radius}
+              stroke={strokeColor}
+              strokeWidth={trackStrokeWidth}
+              strokeLinecap="round" // Added for smoother ends
+            />
           </svg>
         </div>
       );
-    case 'corner': // 90-degree corner, default open towards top-right when rotation=0
+    case 'corner':
       return (
         <div style={style}>
           <svg {...svgStyle}>
-            {/* Path: from mid-left to center, then center to mid-top */}
-            <path d={`M0 ${cellSize / 2} L ${cellSize / 2} ${cellSize / 2} L ${cellSize / 2} 0`}
-                  stroke={strokeColor} strokeWidth={strokeWidth} fill="none" />
+            <path
+              d={`M 0 ${radius} A ${radius} ${radius} 0 0 1 ${radius} 0`}
+              stroke={strokeColor}
+              strokeWidth={trackStrokeWidth}
+              fill="none"
+              strokeLinecap="round" // Added for smoother ends and connections
+            />
           </svg>
         </div>
       );
@@ -76,8 +88,8 @@ export function TrackCanvas({
   onPlaceSegment,
   onRemoveSegment,
   cellSize = CELL_SIZE_DEFAULT,
-  selectedSegmentType, // for hover preview
-  currentRotation, // for hover preview
+  selectedSegmentType,
+  currentRotation,
 }: TrackCanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [hoverCell, setHoverCell] = React.useState<{ x: number, y: number } | null>(null);
@@ -94,7 +106,7 @@ export function TrackCanvas({
   };
   
   const handleCanvasContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
-    event.preventDefault(); // Prevent browser context menu
+    event.preventDefault();
     if (!canvasRef.current) return;
     const rect = canvasRef.current.getBoundingClientRect();
     const x = Math.floor((event.clientX - rect.left) / cellSize);
@@ -133,7 +145,7 @@ export function TrackCanvas({
     width: gridCols * cellSize,
     height: gridRows * cellSize,
     border: '1px solid hsl(var(--border))',
-    position: 'relative', // For absolute positioning of segments
+    position: 'relative',
     backgroundColor: 'hsl(var(--muted) / 0.3)',
     cursor: 'crosshair',
   };
@@ -142,7 +154,7 @@ export function TrackCanvas({
     <div
       ref={canvasRef}
       className="overflow-auto max-w-full max-h-[70vh] border rounded-md shadow-inner bg-background"
-      style={{ width: gridCols * cellSize + 2, height: gridRows * cellSize + 2 }} // +2 for border
+      style={{ width: gridCols * cellSize + 2, height: gridRows * cellSize + 2 }}
     >
       <div 
         style={gridStyle} 
@@ -153,7 +165,6 @@ export function TrackCanvas({
         role="grid"
         aria-label="Track design canvas"
       >
-        {/* Render Grid Cells (optional, for visual aid) */}
         {Array.from({ length: gridRows * gridCols }).map((_, index) => (
           <div
             key={index}
@@ -166,12 +177,10 @@ export function TrackCanvas({
           />
         ))}
 
-        {/* Render Placed Segments */}
         {placedSegments.map((segment) => (
           <SegmentVisual key={segment.id} segment={segment} cellSize={cellSize} />
         ))}
         
-        {/* Render Hover Preview */}
         {hoverCell && selectedSegmentType && (
           <SegmentVisual 
             segment={{ 
@@ -182,6 +191,7 @@ export function TrackCanvas({
               rotation: currentRotation 
             }} 
             cellSize={cellSize} 
+            isPreview
           />
         )}
       </div>
