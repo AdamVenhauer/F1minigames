@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { SegmentType, PlacedSegment, Rotation, SegmentDefinition, TrackLayout, TrackAnalysisOutput } from '@/lib/types';
+import type { SegmentType, PlacedSegment, Rotation, SegmentDefinition, TrackLayout, TrackAnalysisInput, TrackAnalysisOutput } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 
 export const AVAILABLE_SEGMENTS: SegmentDefinition[] = [
@@ -11,7 +11,7 @@ export const AVAILABLE_SEGMENTS: SegmentDefinition[] = [
 ];
 
 export const CELL_SIZE = 30;
-const GRID_COLS = 30;
+const GRID_COLS = 30; // Canvas dimensions in cells
 const GRID_ROWS = 20;
 const LOCAL_STORAGE_TRACK_PREFIX = "apexSketcherTrack_";
 export const MIN_SEGMENTS_FOR_LOOP = 4;
@@ -25,6 +25,7 @@ export function useApexTrackSketcherLogic() {
   const [analysisResult, setAnalysisResult] = useState<TrackAnalysisOutput | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
 
+  // Simulation State
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
   const [simulationCarPosition, setSimulationCarPosition] = useState<{ x: number; y: number } | null>(null);
   const [simulationCarRotation, setSimulationCarRotation] = useState<number>(0);
@@ -33,9 +34,10 @@ export function useApexTrackSketcherLogic() {
 
   const animationFrameRef = useRef<number | null>(null);
   const lastFrameTimeRef = useRef<number>(performance.now());
-  const segmentEnterTimeRef = useRef<number>(0);
-  const isSimulatingRef = useRef(isSimulating);
-  const simulatedTimeRef = useRef(simulatedTime);
+  const segmentEnterTimeRef = useRef<number>(0); // Total simulated time when car entered current segment
+  
+  const isSimulatingRef = useRef(isSimulating); // Ref for immediate access in rAF
+  const simulatedTimeRef = useRef(simulatedTime); // Ref for immediate access in rAF
   const previousCarPositionForRotationRef = useRef<{ x: number; y: number } | null>(null);
 
 
@@ -47,7 +49,6 @@ export function useApexTrackSketcherLogic() {
     simulatedTimeRef.current = simulatedTime;
   }, [simulatedTime]);
 
-
   const handleSelectSegmentType = useCallback((type: SegmentType) => {
     setSelectedSegmentType(type);
   }, []);
@@ -57,7 +58,7 @@ export function useApexTrackSketcherLogic() {
   }, []);
 
   const handlePlaceSegment = useCallback((centerX: number, centerY: number) => {
-    if (!selectedSegmentType || isSimulating) return;
+    if (!selectedSegmentType || isSimulatingRef.current) return;
 
     const newSegmentX = centerX - CELL_SIZE / 2;
     const newSegmentY = centerY - CELL_SIZE / 2;
@@ -65,11 +66,12 @@ export function useApexTrackSketcherLogic() {
     const newSegment: PlacedSegment = {
       id: uuidv4(),
       type: selectedSegmentType,
-      x: newSegmentX,
-      y: newSegmentY,
+      x: newSegmentX, // Storing top-left
+      y: newSegmentY, // Storing top-left
       rotation: currentRotation,
     };
 
+    // Check if placing on an existing segment (replace) vs new spot
     const existingSegmentIndex = placedSegments.findIndex(seg => {
         const segCenterX = seg.x + CELL_SIZE / 2;
         const segCenterY = seg.y + CELL_SIZE / 2;
@@ -85,36 +87,32 @@ export function useApexTrackSketcherLogic() {
     } else {
       setPlacedSegments(prevSegments => [...prevSegments, newSegment]);
     }
-    setAnalysisResult(null);
-    setSimulatedTime(0);
-  }, [selectedSegmentType, currentRotation, placedSegments, isSimulating]);
+    setAnalysisResult(null); // Invalidate analysis on track change
+    setSimulatedTime(0); // Reset simulation time display
+  }, [selectedSegmentType, currentRotation, placedSegments]);
 
   const handleRemoveSegment = useCallback((clickX: number, clickY: number) => {
-    if (isSimulating) return;
+    if (isSimulatingRef.current) return;
     let segmentToRemoveId: string | null = null;
+
     for (let i = placedSegments.length - 1; i >= 0; i--) {
         const segment = placedSegments[i];
         const segCenterX = segment.x + CELL_SIZE / 2;
         const segCenterY = segment.y + CELL_SIZE / 2;
 
-        // Translate click point to be relative to segment's center
         const relX = clickX - segCenterX;
         const relY = clickY - segCenterY;
 
-        // Apply inverse rotation to the click point
         const angleRad = -(segment.rotation * Math.PI) / 180;
         const cosAngle = Math.cos(angleRad);
         const sinAngle = Math.sin(angleRad);
 
         const rotatedRelX = relX * cosAngle - relY * sinAngle;
         const rotatedRelY = relX * sinAngle + relY * cosAngle;
-
-        // Check if the un-rotated click point is within the segment's un-rotated bounding box
+        
         if (
-            rotatedRelX >= -CELL_SIZE / 2 &&
-            rotatedRelX <= CELL_SIZE / 2 &&
-            rotatedRelY >= -CELL_SIZE / 2 &&
-            rotatedRelY <= CELL_SIZE / 2
+            rotatedRelX >= -CELL_SIZE / 2 && rotatedRelX <= CELL_SIZE / 2 &&
+            rotatedRelY >= -CELL_SIZE / 2 && rotatedRelY <= CELL_SIZE / 2
         ) {
             segmentToRemoveId = segment.id;
             break;
@@ -126,14 +124,14 @@ export function useApexTrackSketcherLogic() {
       setAnalysisResult(null);
       setSimulatedTime(0);
     }
-  }, [placedSegments, isSimulating]);
+  }, [placedSegments]);
 
   const handleClearCanvas = useCallback(() => {
-    if (isSimulating) setIsSimulating(false);
+    if (isSimulatingRef.current) setIsSimulating(false);
     setPlacedSegments([]);
     setAnalysisResult(null);
     setSimulatedTime(0);
-  }, [isSimulating]);
+  }, [setIsSimulating]); // setIsSimulating is stable
 
   const formatTime = (ms: number): string => {
     const totalSeconds = Math.floor(ms / 1000);
@@ -144,6 +142,13 @@ export function useApexTrackSketcherLogic() {
   };
 
   const handleAnalyzeTrack = useCallback(async () => {
+    setIsAnalyzing(true);
+    setAnalysisResult(null);
+    setSimulatedTime(0); // Clear simulation time display
+
+    // Simulate processing
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     if (placedSegments.length === 0) {
       setAnalysisResult({
         estimatedLapTime: "N/A",
@@ -151,14 +156,10 @@ export function useApexTrackSketcherLogic() {
         designFeedback: "Add segments to your track to enable analysis.",
         isClosedLoop: false,
       });
+      setIsAnalyzing(false);
       return;
     }
-    setIsAnalyzing(true);
-    setAnalysisResult(null);
-    setSimulatedTime(0);
-
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate processing
-
+    
     const numStraights = placedSegments.filter(s => s.type === 'straight').length;
     const numCorners = placedSegments.filter(s => s.type === 'corner').length;
 
@@ -169,13 +170,13 @@ export function useApexTrackSketcherLogic() {
         totalCalculatedTimeMs += definition.baseTimeMs;
       }
     });
-
+    
     const isPotentiallyClosed = placedSegments.length >= MIN_SEGMENTS_FOR_LOOP;
     let characteristics: string[] = [`Total Segments: ${placedSegments.length}`, `Straights: ${numStraights}`, `Corners: ${numCorners}`];
     let feedback: string;
 
     if (!isPotentiallyClosed) {
-      feedback = `Track has ${placedSegments.length} segments. A minimum of ${MIN_SEGMENTS_FOR_LOOP} segments is suggested for a loop.`;
+      feedback = `Track has ${placedSegments.length} segments. A minimum of ${MIN_SEGMENTS_FOR_LOOP} segments is suggested for a closed loop.`;
       setAnalysisResult({
         estimatedLapTime: "N/A (Track too short or not closed)",
         trackCharacteristics: characteristics,
@@ -183,7 +184,7 @@ export function useApexTrackSketcherLogic() {
         isClosedLoop: false,
       });
     } else {
-      feedback = "Track analysis based on segment count. Assuming a basic loop for lap time calculation.";
+      feedback = "Track analysis based on segment count. Basic loop assumed for lap time calculation.";
       setAnalysisResult({
         estimatedLapTime: formatTime(totalCalculatedTimeMs),
         trackCharacteristics: characteristics,
@@ -197,22 +198,23 @@ export function useApexTrackSketcherLogic() {
 
   const getSegmentVisualEndpoints = useCallback((segment: PlacedSegment) => {
     const { type, x, y, rotation } = segment;
-    const segTopLeftX = x;
-    const segTopLeftY = y;
+    // Segment's x,y is its top-left for rendering purposes.
+    // Its visual center is (x + CELL_SIZE / 2, y + CELL_SIZE / 2).
 
     let localEntryPointX = 0, localEntryPointY = 0, localExitPointX = 0, localExitPointY = 0;
 
+    // Define local points relative to segment's own 0,0 (top-left) assuming rotation is 0
     switch (type) {
       case 'straight':
-        localEntryPointX = 0;
+        localEntryPointX = 0; 
         localEntryPointY = CELL_SIZE / 2;
-        localExitPointX = CELL_SIZE;
+        localExitPointX = CELL_SIZE; 
         localExitPointY = CELL_SIZE / 2;
         break;
-      case 'corner':
-        localEntryPointX = 0;
+      case 'corner': 
+        localEntryPointX = 0; 
         localEntryPointY = CELL_SIZE / 2;
-        localExitPointX = CELL_SIZE / 2;
+        localExitPointX = CELL_SIZE / 2; 
         localExitPointY = 0;
         break;
     }
@@ -232,16 +234,16 @@ export function useApexTrackSketcherLogic() {
       const rotRad = (rotation * Math.PI) / 180;
       const cosR = Math.cos(rotRad);
       const sinR = Math.sin(rotRad);
-      const rotatedX = relX * cosR - relY * sinR;
-      const rotatedY = relX * sinR + relY * cosR;
+      const rotatedRelX = relX * cosR - relY * sinR;
+      const rotatedRelY = relX * sinR + relY * cosR;
 
       return {
-        x: rotatedX + segmentLocalCenterX + segTopLeftX,
-        y: rotatedY + segmentLocalCenterY + segTopLeftY,
+        x: rotatedRelX + segmentLocalCenterX + x, // Add segment's world top-left (x, y)
+        y: rotatedRelY + segmentLocalCenterY + y,
       };
     });
     return { entryPoint: rotatedPoints[0], exitPoint: rotatedPoints[1] };
-  }, []);
+  }, []); // CELL_SIZE is stable
 
 
   const handleStartSimulation = useCallback(() => {
@@ -249,119 +251,132 @@ export function useApexTrackSketcherLogic() {
       alert("Please wait for analysis to complete before simulating.");
       return;
     }
-    if (!analysisResult || !analysisResult.isClosedLoop) {
-      alert("Please analyze the track and ensure it's considered a closed loop before simulating.");
+    if (!analysisResult) {
+      alert("Please analyze the track first.");
+      return;
+    }
+    if (!analysisResult.isClosedLoop) {
+      alert("Track is not considered a closed loop. Simulation not started.");
       return;
     }
     if (placedSegments.length < MIN_SEGMENTS_FOR_LOOP) {
       alert(`Track must have at least ${MIN_SEGMENTS_FOR_LOOP} segments to simulate.`);
       return;
     }
-    if (isSimulating) return;
+    if (isSimulatingRef.current) return; // Already simulating
 
-    setIsSimulating(true);
+    const firstSegment = placedSegments[0];
+    if (!firstSegment) { // This guard should ideally never be hit if other guards are effective
+        alert("Error: No segments found to start simulation. Please ensure track is valid.");
+        setIsSimulating(false); // Ensure simulation state is false
+        return;
+    }
+
+    setIsSimulating(true); 
     setSimulatedTime(0);
     simulatedTimeRef.current = 0;
     setCurrentSimSegmentIndex(0);
-    segmentEnterTimeRef.current = 0;
+    segmentEnterTimeRef.current = 0; // Car starts at the beginning of the first segment at time 0 of the segment
 
-    const firstSegment = placedSegments[0];
-    if (firstSegment) {
-      const { entryPoint } = getSegmentVisualEndpoints(firstSegment);
-      setSimulationCarPosition(entryPoint);
-      setSimulationCarRotation(firstSegment.rotation); // Initial rotation based on first segment
-      previousCarPositionForRotationRef.current = { ...entryPoint }; // Initialize for rotation calc
-    } else {
-      setIsSimulating(false);
-      return;
-    }
+    // Explicitly use properties from the fetched firstSegment
+    const { entryPoint: firstEntryPoint } = getSegmentVisualEndpoints(firstSegment);
+    const initialRotation = firstSegment.rotation;
+
+    setSimulationCarPosition(firstEntryPoint);
+    setSimulationCarRotation(initialRotation);
+    previousCarPositionForRotationRef.current = { ...firstEntryPoint };
+
     lastFrameTimeRef.current = performance.now();
-  }, [analysisResult, isAnalyzing, isSimulating, placedSegments, getSegmentVisualEndpoints]);
+
+  }, [analysisResult, isAnalyzing, placedSegments, getSegmentVisualEndpoints, MIN_SEGMENTS_FOR_LOOP]);
+
 
   useEffect(() => {
-    if (!isSimulating) {
-        if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-        previousCarPositionForRotationRef.current = null; // Reset on simulation stop
+    if (!isSimulating) { 
+        if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
+            animationFrameRef.current = null;
+        }
         return;
     }
+
     if (currentSimSegmentIndex === null || currentSimSegmentIndex >= placedSegments.length) {
-        setIsSimulating(false);
-        if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+        setIsSimulating(false); 
         return;
+    }
+    
+    const currentSegment = placedSegments[currentSimSegmentIndex];
+    if (!currentSegment) {
+        setIsSimulating(false); 
+        return;
+    }
+
+    // Ensure lastFrameTimeRef is initialized before first animate call if rAF starts immediately
+    if (!lastFrameTimeRef.current) { // Should be set by handleStartSimulation
+        lastFrameTimeRef.current = performance.now();
     }
 
     const animate = (timestamp: number) => {
-      if (!isSimulatingRef.current) {
+      if (!isSimulatingRef.current) { 
         if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null; // Clear ref on stop
         return;
       }
 
-      const currentSegment = placedSegments[currentSimSegmentIndex!];
-      if (!currentSegment) {
-        setIsSimulating(false);
-        if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-        return;
-      }
+      const currentSegmentForFrame = placedSegments[currentSimSegmentIndex!]; 
+       if (!currentSegmentForFrame) {
+           setIsSimulating(false);
+           return;
+       }
 
       const deltaTime = timestamp - lastFrameTimeRef.current;
       lastFrameTimeRef.current = timestamp;
 
       const newSimulatedTotalTime = simulatedTimeRef.current + deltaTime;
       simulatedTimeRef.current = newSimulatedTotalTime;
-      setSimulatedTime(newSimulatedTotalTime);
+      setSimulatedTime(newSimulatedTotalTime); 
 
-      const segmentDef = AVAILABLE_SEGMENTS.find(s => s.type === currentSegment.type);
-      const segmentDuration = segmentDef ? segmentDef.baseTimeMs : 1000;
+      const segmentDef = AVAILABLE_SEGMENTS.find(s => s.type === currentSegmentForFrame.type);
+      const segmentDuration = segmentDef ? segmentDef.baseTimeMs : 1000; 
 
       const elapsedInSegment = newSimulatedTotalTime - segmentEnterTimeRef.current;
       let progressRatio = Math.min(1, elapsedInSegment / segmentDuration);
+      
+      let newCarX: number, newCarY: number;
+      
+      const { entryPoint, exitPoint } = getSegmentVisualEndpoints(currentSegmentForFrame);
 
-      let newCarX, newCarY;
-      let newCarRot = simulationCarRotation; // Default to current rotation
-
-      const { entryPoint, exitPoint } = getSegmentVisualEndpoints(currentSegment);
-
-      if (currentSegment.type === 'straight') {
+      if (currentSegmentForFrame.type === 'straight') {
         newCarX = entryPoint.x + (exitPoint.x - entryPoint.x) * progressRatio;
         newCarY = entryPoint.y + (exitPoint.y - entryPoint.y) * progressRatio;
-      } else { // Corner
-        const segmentTopLeftX = currentSegment.x;
-        const segmentTopLeftY = currentSegment.y;
+      } else { 
+        const segmentTopLeftX = currentSegmentForFrame.x;
+        const segmentTopLeftY = currentSegmentForFrame.y;
         const radius = CELL_SIZE / 2;
-
-        const arcCenterXLocal = radius;
-        const arcCenterYLocal = radius;
-        const startAngleRad = Math.PI; // Local angle for the arc starting at the left mid-point
-        const endAngleRad = Math.PI / 2;   // Local angle for the arc ending at the top mid-point
-
+        const startAngleRad = Math.PI; 
+        const endAngleRad = Math.PI / 2; 
         const currentAngleRad = startAngleRad + (endAngleRad - startAngleRad) * progressRatio;
-
         const carX_on_arc_local_to_center = radius * Math.cos(currentAngleRad);
         const carY_on_arc_local_to_center = radius * Math.sin(currentAngleRad);
-
-        const carX_local_to_segment_origin = arcCenterXLocal + carX_on_arc_local_to_center;
-        const carY_local_to_segment_origin = arcCenterYLocal + carY_on_arc_local_to_center;
-
+        const carX_local_to_segment_origin = (CELL_SIZE / 2) + carX_on_arc_local_to_center;
+        const carY_local_to_segment_origin = (CELL_SIZE / 2) + carY_on_arc_local_to_center;
         const localRelToSegCenter_X = carX_local_to_segment_origin - (CELL_SIZE / 2);
         const localRelToSegCenter_Y = carY_local_to_segment_origin - (CELL_SIZE / 2);
-
-        const segRotRad = (currentSegment.rotation * Math.PI) / 180;
+        const segRotRad = (currentSegmentForFrame.rotation * Math.PI) / 180;
         const cosSegRot = Math.cos(segRotRad);
         const sinSegRot = Math.sin(segRotRad);
-
         const rotatedRelX = localRelToSegCenter_X * cosSegRot - localRelToSegCenter_Y * sinSegRot;
         const rotatedRelY = localRelToSegCenter_X * sinSegRot + localRelToSegCenter_Y * cosSegRot;
-
         newCarX = rotatedRelX + (CELL_SIZE / 2) + segmentTopLeftX;
         newCarY = rotatedRelY + (CELL_SIZE / 2) + segmentTopLeftY;
       }
-
-      // Update rotation based on movement direction
+      
       const prevPosForRot = previousCarPositionForRotationRef.current;
+      let newCarRot = simulationCarRotation; 
       if (prevPosForRot) {
           const dx = newCarX - prevPosForRot.x;
           const dy = newCarY - prevPosForRot.y;
-          if (Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001) { // Avoid atan2(0,0) and ensure movement
+          if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) { 
               const angleRad = Math.atan2(dy, dx);
               newCarRot = (angleRad * 180) / Math.PI;
           }
@@ -370,31 +385,29 @@ export function useApexTrackSketcherLogic() {
       setSimulationCarPosition({ x: newCarX, y: newCarY });
       previousCarPositionForRotationRef.current = { x: newCarX, y: newCarY };
 
-
       if (progressRatio >= 1) {
-        const nextSimSegmentIndex = currentSimSegmentIndex! + 1;
-        // Store the exit point of the current segment before moving to the next
-        const currentSegmentExitPoint = getSegmentVisualEndpoints(currentSegment).exitPoint;
-        previousCarPositionForRotationRef.current = { ...currentSegmentExitPoint }; // Prime for next segment entry rotation
+        const nextSimSegmentIndexVal = currentSimSegmentIndex! + 1;
+        const currentSegmentExitPoint = getSegmentVisualEndpoints(currentSegmentForFrame).exitPoint;
 
-        if (nextSimSegmentIndex < placedSegments.length) {
-          segmentEnterTimeRef.current = newSimulatedTotalTime;
-          setCurrentSimSegmentIndex(nextSimSegmentIndex);
-
-          const nextSegment = placedSegments[nextSimSegmentIndex];
-          const { entryPoint: nextEntryPoint } = getSegmentVisualEndpoints(nextSegment);
-          setSimulationCarPosition(nextEntryPoint); // Snap to start of next segment
-          // Initial rotation for the next segment will be calculated in the next frame
+        if (nextSimSegmentIndexVal < placedSegments.length) {
+          segmentEnterTimeRef.current = newSimulatedTotalTime; 
+          setCurrentSimSegmentIndex(nextSimSegmentIndexVal);
+          
+           const nextSegment = placedSegments[nextSimSegmentIndexVal];
+           const { entryPoint: nextEntryPoint } = getSegmentVisualEndpoints(nextSegment);
+           setSimulationCarPosition(nextEntryPoint);
+           previousCarPositionForRotationRef.current = { ...currentSegmentExitPoint }; 
         } else {
-          setIsSimulating(false);
-          setSimulationCarPosition(exitPoint); // Ensure car is at the very end
+          setIsSimulating(false); 
+          setSimulationCarPosition(exitPoint); 
         }
       }
 
-      if (isSimulatingRef.current && (currentSimSegmentIndex! < placedSegments.length -1 || (currentSimSegmentIndex === placedSegments.length -1 && progressRatio < 1)) ) {
+      if (isSimulatingRef.current) { // Check ref again before scheduling next frame
         animationFrameRef.current = requestAnimationFrame(animate);
-      } else if (isSimulatingRef.current) {
-        setIsSimulating(false);
+      } else {
+         if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+         animationFrameRef.current = null;
       }
     };
 
@@ -403,6 +416,7 @@ export function useApexTrackSketcherLogic() {
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
       }
     };
   }, [isSimulating, currentSimSegmentIndex, placedSegments, getSegmentVisualEndpoints, simulationCarRotation]);
@@ -424,7 +438,7 @@ export function useApexTrackSketcherLogic() {
   }, [placedSegments, trackName]);
 
   const handleLoadTrack = useCallback((nameToLoad: string) => {
-    if (isSimulating) setIsSimulating(false);
+    if (isSimulatingRef.current) setIsSimulating(false);
     const savedTrackJSON = localStorage.getItem(LOCAL_STORAGE_TRACK_PREFIX + nameToLoad);
     if (savedTrackJSON) {
       try {
@@ -441,7 +455,7 @@ export function useApexTrackSketcherLogic() {
     } else {
       alert(`No track found with name "${nameToLoad}".`);
     }
-  }, [isSimulating]);
+  }, [setIsSimulating]);
 
   const getSavedTrackNames = useCallback(() => {
     const names: string[] = [];
@@ -453,7 +467,7 @@ export function useApexTrackSketcherLogic() {
         }
       }
     }
-    return names.sort();
+    return names.sort((a, b) => a.localeCompare(b));
   }, []);
 
   return {
