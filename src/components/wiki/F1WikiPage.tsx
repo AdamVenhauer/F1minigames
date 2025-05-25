@@ -23,6 +23,16 @@ interface WikiSection {
   content: React.ReactNode;
 }
 
+// Helper function to convert simple Markdown bold to HTML strong tags
+function formatAIResponse(text: string): string {
+  // Replace *bold* with <strong>bold</strong>
+  // This regex handles asterisks that are not part of other words
+  // and ensures there are non-space characters inside the asterisks.
+  let formattedText = text.replace(/\*(?!\s)(.+?)(?<!\s)\*/g, '<strong>$1</strong>');
+  return formattedText;
+}
+
+
 const wikiSections: WikiSection[] = [
   {
     id: "history",
@@ -148,10 +158,10 @@ const wikiSections: WikiSection[] = [
           Formula 1's history is rich with legendary drivers and iconic teams that have left an indelible mark on the sport.
         </p>
         <p>
-          <strong>Legendary Drivers:</strong> Figures like Juan Manuel Fangio (5 championships in the 1950s), Jim Clark (dominant in the 60s), Jackie Stewart (3-time champion and safety advocate), Niki Lauda (champion with Ferrari and McLaren), Alain Prost ("The Professor", 4-time champion), Ayrton Senna (charismatic 3-time champion), Michael Schumacher (record 7 championships), and Lewis Hamilton (also 7 championships) are just a few names that resonate with F1 fans worldwide. Each brought unique skill, determination, and personality to the pinnacle of motorsport. Other notable drivers include Sebastian Vettel, Fernando Alonso, Max Verstappen, Kimi Räikkönen, and Gilles Villeneuve.
+          <strong>Legendary Drivers:</strong> Figures like Juan Manuel Fangio (5 championships in the 1950s), Jim Clark (dominant in the 60s), Jackie Stewart (3-time champion and safety advocate), Niki Lauda (champion with Ferrari and McLaren), Alain Prost ("The Professor", 4-time champion), Ayrton Senna (charismatic 3-time champion), Michael Schumacher (record 7 championships), and Lewis Hamilton (also 7 championships) are just a few names that resonate with F1 fans worldwide. Other notable drivers include Sebastian Vettel, Fernando Alonso, Max Verstappen, Kimi Räikkönen, Gilles Villeneuve, and Nigel Mansell.
         </p>
         <p>
-          <strong>Iconic Teams:</strong> Ferrari, with its passionate Tifosi and rich heritage, is the oldest and most successful team in F1 history. McLaren and Williams are other British powerhouses with numerous championships. Lotus innovated greatly in aerodynamics and car design. Mercedes has dominated the hybrid era. Red Bull Racing has also achieved multiple championships with innovative designs. Other notable teams include Brabham, Renault/Alpine, and Benetton.
+          <strong>Iconic Teams:</strong> Ferrari, with its passionate Tifosi and rich heritage, is the oldest and most successful team in F1 history. McLaren and Williams are other British powerhouses with numerous championships. Lotus innovated greatly in aerodynamics and car design. Mercedes has dominated the hybrid era. Red Bull Racing has also achieved multiple championships with innovative designs, becoming a dominant force in the 2010s and 2020s. Other notable teams include Brabham, Renault/Alpine, and Benetton.
         </p>
       </div>
     ),
@@ -173,6 +183,8 @@ const wikiSections: WikiSection[] = [
             <li><strong>Suzuka (Japan):</strong> A challenging figure-eight layout, highly regarded by drivers for its 'S' Curves and 130R.</li>
             <li><strong>Interlagos (Brazil):</strong> Known for its passionate crowd and dramatic races, often affected by weather, officially Autódromo José Carlos Pace.</li>
             <li><strong>Nürburgring Nordschleife (Germany - historic):</strong> The "Green Hell," though no longer used for F1 due to safety, it remains legendary for its length and difficulty.</li>
+            <li><strong>Circuit de la Sarthe (Le Mans, France - historic for F1):</strong> While famous for the 24-hour race, it also hosted the French Grand Prix in the past.</li>
+            <li><strong>Zandvoort (Netherlands):</strong> A historic track with banked corners, returned to the F1 calendar recently.</li>
             <li><strong>Imola (Italy):</strong> The Autodromo Internazionale Enzo e Dino Ferrari, a historic and challenging track.</li>
             <li><strong>Circuit Gilles Villeneuve (Canada):</strong> Known for the "Wall of Champions."</li>
         </ul>
@@ -247,7 +259,10 @@ export function F1WikiPage() {
             {searchResult && (
               <div className="mt-6 p-4 bg-background/70 rounded-md shadow prose prose-sm dark:prose-invert max-w-none">
                 <h3 className="text-xl font-semibold text-primary mb-2">Expert Answer:</h3>
-                <p className="whitespace-pre-wrap">{searchResult}</p>
+                <div 
+                  className="whitespace-pre-wrap" 
+                  dangerouslySetInnerHTML={{ __html: formatAIResponse(searchResult) }} 
+                />
               </div>
             )}
           </div>

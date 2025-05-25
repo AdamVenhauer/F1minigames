@@ -3,13 +3,15 @@
 /**
  * @fileOverview An F1 knowledge query flow.
  *
- * - f1QueryFlow - A function that answers F1-related questions.
- * - F1QueryInput - The input type for the f1QueryFlow function.
- * - F1QueryOutput - The return type for the f1QueryFlow function.
+ * - queryF1Expert - A function that answers F1-related questions.
+ * - F1QueryInput - The input type for the queryF1Expert function.
+ * - F1QueryOutput - The return type for the queryF1Expert function.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit'; // Genkit re-exports z from zod
+import { TrackAnalysisInputSchema, TrackAnalysisOutputSchema, type TrackAnalysisInput, type TrackAnalysisOutput } from '@/lib/types';
+
 
 const F1QueryInputSchema = z.object({
   userQuery: z.string().describe('The user\'s question about Formula 1.'),
@@ -17,7 +19,7 @@ const F1QueryInputSchema = z.object({
 export type F1QueryInput = z.infer<typeof F1QueryInputSchema>;
 
 const F1QueryOutputSchema = z.object({
-  answer: z.string().describe('The AI-generated answer to the F1 question.'),
+  answer: z.string().describe('The AI-generated answer to the F1 question, formatted for readability.'),
 });
 export type F1QueryOutput = z.infer<typeof F1QueryOutputSchema>;
 
@@ -34,6 +36,11 @@ Answer the following user query about Formula 1 comprehensively and accurately.
 If the question is ambiguous, provide the most likely interpretation.
 If the question is outside of F1 knowledge, state that politely.
 
+Format your answer for readability:
+- Use double newlines to separate paragraphs.
+- For lists, start each item on a new line with an asterisk and a space (e.g., "* List item").
+- You can use asterisks for bolding (e.g., *Important Term*).
+
 User Query: {{{userQuery}}}
 
 Provide your answer.`,
@@ -46,14 +53,20 @@ const f1QueryFlow = ai.defineFlow(
     outputSchema: F1QueryOutputSchema,
   },
   async (input) => {
-    const {output} = await prompt(input);
-    if (!output) {
-      // This case handles if the prompt call itself fails to produce an output object.
-      // The FAILED_PRECONDITION error (API key) is usually caught before this, on the Genkit client side,
-      // but this makes the flow itself a bit more robust.
-      return { answer: "I'm sorry, I couldn't generate a response at this time. Please check the application setup." };
+    try {
+      const {output} = await prompt(input);
+      if (!output || !output.answer) {
+        // This case handles if the prompt call itself fails to produce an output object or answer.
+        return { answer: "I'm sorry, I couldn't generate a response at this time. Please try again." };
+      }
+      return output;
+    } catch (error: any) {
+      console.error("Error in f1QueryFlow:", error);
+      // Check for specific API key error messages if possible, though this is a generic catch
+      if (error.message && (error.message.includes('API key') || error.message.includes('FAILED_PRECONDITION'))) {
+        return { answer: "AI Service Error: Could not connect due to an API key or configuration issue. Please check the application setup." };
+      }
+      return { answer: "An unexpected error occurred while fetching the answer. Please try again later." };
     }
-    return output;
   }
 );
-
