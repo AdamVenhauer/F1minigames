@@ -48,8 +48,12 @@ const f1QueryFlow = ai.defineFlow(
   async (input) => {
     const {output} = await prompt(input);
     if (!output) {
-      return { answer: "I'm sorry, I couldn't generate a response at this time." };
+      // This case handles if the prompt call itself fails to produce an output object.
+      // The FAILED_PRECONDITION error (API key) is usually caught before this, on the Genkit client side,
+      // but this makes the flow itself a bit more robust.
+      return { answer: "I'm sorry, I couldn't generate a response at this time. Please check the application setup." };
     }
     return output;
   }
 );
+
