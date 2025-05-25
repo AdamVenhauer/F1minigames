@@ -41,7 +41,7 @@ const SegmentVisual = ({ segment, isPreview }: { segment: PlacedSegment, isPrevi
   };
 
   const strokeColor = "hsl(var(--primary))";
-  const trackStrokeWidth = Math.max(4, CELL_SIZE / 3.5); 
+  const trackStrokeWidth = Math.max(4, CELL_SIZE / 3.5);
   const radius = CELL_SIZE / 2;
 
   switch (segment.type) {
@@ -56,8 +56,8 @@ const SegmentVisual = ({ segment, isPreview }: { segment: PlacedSegment, isPrevi
               y2={radius}
               stroke={strokeColor}
               strokeWidth={trackStrokeWidth}
-              strokeLinecap="butt" 
-              strokeLinejoin="round" 
+              strokeLinecap="butt"
+              strokeLinejoin="round"
             />
           </svg>
         </div>
@@ -71,8 +71,8 @@ const SegmentVisual = ({ segment, isPreview }: { segment: PlacedSegment, isPrevi
               stroke={strokeColor}
               strokeWidth={trackStrokeWidth}
               fill="none"
-              strokeLinecap="butt" 
-              strokeLinejoin="round" 
+              strokeLinecap="butt"
+              strokeLinejoin="round"
             />
           </svg>
         </div>
@@ -102,7 +102,7 @@ export function TrackCanvas({
   const canvasHeight = gridRows * CELL_SIZE;
 
   const handleCanvasClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!canvasRef.current || isSimulating) return; 
+    if (!canvasRef.current || isSimulating) return;
     const rect = canvasRef.current.getBoundingClientRect();
     const clickX = event.clientX - rect.left;
     const clickY = event.clientY - rect.top;
@@ -112,7 +112,7 @@ export function TrackCanvas({
 
   const handleCanvasContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
     event.preventDefault();
-    if (!canvasRef.current || isSimulating) return; 
+    if (!canvasRef.current || isSimulating) return;
     const rect = canvasRef.current.getBoundingClientRect();
     const clickX = event.clientX - rect.left;
     const clickY = event.clientY - rect.top;
@@ -139,18 +139,18 @@ export function TrackCanvas({
     width: canvasWidth,
     height: canvasHeight,
     border: '1px solid hsl(var(--border))',
-    position: 'relative', 
+    position: 'relative',
     backgroundColor: 'hsl(var(--muted) / 0.3)',
     cursor: isSimulating ? 'default' : 'crosshair',
-    overflow: 'hidden', 
+    overflow: 'hidden',
   };
 
-  const carSize = CELL_SIZE / 2; // Make car a bit smaller for better visibility within segment
+  const carSize = CELL_SIZE / 2;
 
   return (
     <div
       className="overflow-auto max-w-full max-h-[70vh] border rounded-md shadow-inner bg-background flex items-center justify-center"
-      style={{ width: canvasWidth + 4, height: canvasHeight + 4 }} 
+      style={{ width: canvasWidth + 4, height: canvasHeight + 4 }}
     >
       <div
         ref={canvasRef}
@@ -184,7 +184,7 @@ export function TrackCanvas({
             segment={{
               id: 'preview',
               type: selectedSegmentType,
-              x: mousePosition.x - CELL_SIZE / 2, 
+              x: mousePosition.x - CELL_SIZE / 2,
               y: mousePosition.y - CELL_SIZE / 2,
               rotation: currentRotation,
             }}
@@ -202,13 +202,12 @@ export function TrackCanvas({
               height: carSize,
               transform: `rotate(${simulationCarRotation}deg)`,
               transformOrigin: 'center center',
-              transition: 'left 0.05s linear, top 0.05s linear', 
+              // Removed CSS transition for smoother JS animation
             }}
             aria-label="Simulation car"
           >
-            {/* Adjusted SVG for car - a simple filled triangle pointing right */}
             <svg width={carSize} height={carSize} viewBox="-5 -5 20 20" fill="hsl(var(--destructive))">
-              <path d="M10 0 L-5 7 L-5 -7 Z" /> 
+              <path d="M10 0 L-5 7 L-5 -7 Z" />
             </svg>
           </div>
         )}
