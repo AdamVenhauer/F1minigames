@@ -4,7 +4,7 @@
 import type { SegmentDefinition, SegmentType, Rotation } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { RotateCw, FastForward, CornerLeftDown, CornerRightDown } from 'lucide-react'; // Placeholder icons
+import { RotateCw, FastForward, CornerLeftDown } from 'lucide-react'; 
 import { cn } from '@/lib/utils';
 
 interface SegmentToolboxProps {
@@ -13,6 +13,7 @@ interface SegmentToolboxProps {
   currentRotation: Rotation;
   onSelectSegment: (type: SegmentType) => void;
   onRotateSegment: () => void;
+  isSimulating: boolean; // New prop
 }
 
 const SegmentIcon = ({ type }: { type: SegmentType }) => {
@@ -20,11 +21,7 @@ const SegmentIcon = ({ type }: { type: SegmentType }) => {
     case 'straight':
       return <FastForward className="w-5 h-5 mr-2" />;
     case 'corner':
-      return <CornerLeftDown className="w-5 h-5 mr-2" />; // Generic corner icon
-    case 'chicane_left':
-      return <CornerRightDown className="w-5 h-5 mr-2 transform scale-x-[-1]" />; // Placeholder
-    case 'chicane_right':
-      return <CornerRightDown className="w-5 h-5 mr-2" />; // Placeholder
+      return <CornerLeftDown className="w-5 h-5 mr-2" />;
     default:
       return null;
   }
@@ -36,6 +33,7 @@ export function SegmentToolbox({
   currentRotation,
   onSelectSegment,
   onRotateSegment,
+  isSimulating, // Destructure new prop
 }: SegmentToolboxProps) {
   return (
     <Card className="w-full md:w-64 shadow-lg">
@@ -54,6 +52,7 @@ export function SegmentToolbox({
                 selectedSegmentType === segment.type && "ring-2 ring-primary ring-offset-2"
               )}
               onClick={() => onSelectSegment(segment.type)}
+              disabled={isSimulating} // Disable during simulation
             >
               <SegmentIcon type={segment.type} />
               {segment.label}
@@ -67,12 +66,13 @@ export function SegmentToolbox({
             className="w-full"
             onClick={onRotateSegment}
             aria-label="Rotate selected segment"
+            disabled={isSimulating} // Disable during simulation
           >
             <RotateCw className="w-5 h-5 mr-2" />
             Rotate ({currentRotation}°)
           </Button>
         </div>
-        {selectedSegmentType && (
+        {selectedSegmentType && !isSimulating && (
           <p className="text-xs text-muted-foreground p-2 bg-muted rounded-md">
             Selected: {availableSegments.find(s => s.type === selectedSegmentType)?.label} at {currentRotation}°
           </p>
@@ -81,3 +81,5 @@ export function SegmentToolbox({
     </Card>
   );
 }
+
+    

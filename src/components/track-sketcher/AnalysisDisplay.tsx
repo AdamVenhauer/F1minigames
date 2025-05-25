@@ -4,14 +4,41 @@
 import type { TrackAnalysisOutput } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Lightbulb, Clock, ListChecks, CircleCheck, CircleAlert } from 'lucide-react';
+import { Lightbulb, Clock, ListChecks, CircleCheck, CircleAlert, Play, Timer } from 'lucide-react';
 
 interface AnalysisDisplayProps {
   analysisResult: TrackAnalysisOutput | null;
   isAnalyzing: boolean;
+  isSimulating: boolean;      // New prop
+  simulatedTime: number;      // New prop
+  formatTime: (ms: number) => string; // New prop
 }
 
-export function AnalysisDisplay({ analysisResult, isAnalyzing }: AnalysisDisplayProps) {
+export function AnalysisDisplay({
+  analysisResult,
+  isAnalyzing,
+  isSimulating,
+  simulatedTime,
+  formatTime,
+}: AnalysisDisplayProps) {
+  if (isSimulating) {
+    return (
+      <Card className="w-full shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center">
+            <Play className="w-5 h-5 mr-2 text-destructive animate-pulse" /> Simulating Lap...
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-4">
+            <p className="text-3xl font-bold text-primary">{formatTime(simulatedTime)}</p>
+            <p className="text-sm text-muted-foreground">Current Lap Time</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
   if (isAnalyzing) {
     return (
       <Card className="w-full shadow-lg">
@@ -38,6 +65,7 @@ export function AnalysisDisplay({ analysisResult, isAnalyzing }: AnalysisDisplay
         <CardContent>
           <p className="text-sm text-muted-foreground">
             Design your track and click "Analyze Track" to get calculated insights and lap time estimations.
+            A minimum of 4 segments are usually needed for a valid track.
           </p>
         </CardContent>
       </Card>
@@ -50,13 +78,14 @@ export function AnalysisDisplay({ analysisResult, isAnalyzing }: AnalysisDisplay
     <Card className="w-full shadow-lg">
       <CardHeader>
         <CardTitle className="text-xl flex items-center">
-          <Lightbulb className="w-5 h-5 mr-2 text-accent" /> Track Analysis Complete
+          <Lightbulb className="w-5 h-5 mr-2 text-accent" /> 
+          {analysisResult.estimatedLapTime.startsWith("Error") ? "Analysis Error" : "Track Analysis Complete"}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
           <h4 className="font-semibold text-md flex items-center mb-1">
-            <Clock className="w-4 h-4 mr-2 text-primary" /> Calculated Lap Time:
+            <Timer className="w-4 h-4 mr-2 text-primary" /> Calculated Lap Time:
           </h4>
           <p className={`text-2xl font-bold ${isLapTimeAvailable ? 'text-primary' : 'text-muted-foreground'}`}>
             {analysisResult.estimatedLapTime}
@@ -110,3 +139,5 @@ export function AnalysisDisplay({ analysisResult, isAnalyzing }: AnalysisDisplay
     </Card>
   );
 }
+
+    

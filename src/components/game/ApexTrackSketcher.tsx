@@ -23,6 +23,7 @@ export default function ApexTrackSketcherPage() {
             currentRotation={logic.currentRotation}
             onSelectSegment={logic.handleSelectSegmentType}
             onRotateSegment={logic.handleRotatePreviewSegment}
+            isSimulating={logic.isSimulating} // Pass isSimulating
           />
           <TrackControls
             trackName={logic.trackName}
@@ -33,6 +34,12 @@ export default function ApexTrackSketcherPage() {
             onSaveTrack={logic.handleSaveTrack}
             onLoadTrack={logic.handleLoadTrack}
             getSavedTrackNames={logic.getSavedTrackNames}
+            // Simulation props
+            onStartSimulation={logic.handleStartSimulation}
+            isSimulating={logic.isSimulating}
+            analysisResult={logic.analysisResult}
+            placedSegmentsLength={logic.placedSegments.length}
+            minSegmentsForSimulation={logic.MIN_SEGMENTS_FOR_LOOP}
           />
         </div>
       </ScrollArea>
@@ -44,9 +51,14 @@ export default function ApexTrackSketcherPage() {
           gridRows={logic.GRID_ROWS}
           placedSegments={logic.placedSegments}
           onPlaceSegment={logic.handlePlaceSegment}
-          onRemoveSegment={logic.handleRemoveSegment} // Added for right-click removal
+          onRemoveSegment={logic.handleRemoveSegment}
           selectedSegmentType={logic.selectedSegmentType}
           currentRotation={logic.currentRotation}
+          cellSize={logic.CELL_SIZE}
+          // Simulation props
+          isSimulating={logic.isSimulating}
+          simulationCarPosition={logic.simulationCarPosition}
+          simulationCarRotation={logic.simulationCarRotation}
         />
       </div>
 
@@ -55,8 +67,13 @@ export default function ApexTrackSketcherPage() {
          <AnalysisDisplay
             analysisResult={logic.analysisResult}
             isAnalyzing={logic.isAnalyzing}
+            isSimulating={logic.isSimulating} // Pass isSimulating
+            simulatedTime={logic.simulatedTime} // Pass simulatedTime
+            formatTime={logic.formatTime} // Pass formatTime
           />
       </ScrollArea>
     </div>
   );
 }
+
+    

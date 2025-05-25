@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useState, useEffect } from 'react';
+import type { TrackAnalysisOutput } from '@/lib/types'; // Import TrackAnalysisOutput
 
 interface TrackControlsProps {
   trackName: string;
@@ -24,6 +25,12 @@ interface TrackControlsProps {
   onSaveTrack: () => void;
   onLoadTrack: (name: string) => void;
   getSavedTrackNames: () => string[];
+  // New props for simulation button state
+  onStartSimulation: () => void;
+  isSimulating: boolean;
+  analysisResult: TrackAnalysisOutput | null;
+  placedSegmentsLength: number;
+  minSegmentsForSimulation: number;
 }
 
 export function TrackControls({
@@ -35,13 +42,18 @@ export function TrackControls({
   onSaveTrack,
   onLoadTrack,
   getSavedTrackNames,
+  onStartSimulation, // New prop
+  isSimulating,      // New prop
+  analysisResult,    // New prop
+  placedSegmentsLength, // New prop
+  minSegmentsForSimulation, // New prop
 }: TrackControlsProps) {
   const [savedTracks, setSavedTracks] = useState<string[]>([]);
   const [selectedTrackToLoad, setSelectedTrackToLoad] = useState<string>("");
 
   useEffect(() => {
     setSavedTracks(getSavedTrackNames());
-  }, [getSavedTrackNames]); // Re-fetch if the function itself could change, or on some other trigger
+  }, [getSavedTrackNames, isSimulating]); // Re-fetch if sim stops, might have new saved tracks
 
   const handleLoad = () => {
     if (selectedTrackToLoad) {
@@ -49,10 +61,12 @@ export function TrackControls({
     }
   };
   
-  // Placeholder for starting simulation, if we add that feature
-  const handleStartSimulation = () => {
-    alert("Track simulation feature coming soon!");
-  };
+  const canSimulate = 
+    !isAnalyzing &&
+    !isSimulating &&
+    analysisResult !== null &&
+    analysisResult.isClosedLoop === true &&
+    placedSegmentsLength >= minSegmentsForSimulation;
 
   return (
     <Card className="w-full shadow-lg">
@@ -73,10 +87,10 @@ export function TrackControls({
         </div>
         
         <div className="grid grid-cols-2 gap-2">
-          <Button onClick={onSaveTrack} variant="outline">
+          <Button onClick={onSaveTrack} variant="outline" disabled={isSimulating}>
             <Save className="w-4 h-4 mr-2" /> Save
           </Button>
-          <Button onClick={onClearCanvas} variant="destructive_outline">
+          <Button onClick={onClearCanvas} variant="destructive" disabled={isSimulating}>
             <Eraser className="w-4 h-4 mr-2" /> Clear
           </Button>
         </div>
@@ -84,7 +98,7 @@ export function TrackControls({
         <div className="space-y-2">
           <Label htmlFor="loadTrackSelect" className="text-sm font-medium">Load Track</Label>
           <div className="flex gap-2">
-            <Select value={selectedTrackToLoad} onValueChange={setSelectedTrackToLoad}>
+            <Select value={selectedTrackToLoad} onValueChange={setSelectedTrackToLoad} disabled={isSimulating}>
               <SelectTrigger id="loadTrackSelect" className="flex-grow">
                 <SelectValue placeholder="Select a track" />
               </SelectTrigger>
@@ -98,13 +112,13 @@ export function TrackControls({
                 )}
               </SelectContent>
             </Select>
-            <Button onClick={handleLoad} disabled={!selectedTrackToLoad || selectedTrackToLoad === "no_tracks"} variant="outline" aria-label="Load selected track">
+            <Button onClick={handleLoad} disabled={!selectedTrackToLoad || selectedTrackToLoad === "no_tracks" || isSimulating} variant="outline" aria-label="Load selected track">
               <FolderOpen className="w-4 h-4" />
             </Button>
           </div>
         </div>
         
-        <Button onClick={onAnalyzeTrack} disabled={isAnalyzing} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
+        <Button onClick={onAnalyzeTrack} disabled={isAnalyzing || isSimulating} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
           {isAnalyzing ? (
             <>
               <RotateCcw className="w-4 h-4 mr-2 animate-spin" /> Analyzing...
@@ -116,12 +130,14 @@ export function TrackControls({
           )}
         </Button>
         
-        {/* Placeholder for simulation button */}
-        <Button onClick={handleStartSimulation} variant="secondary" className="w-full" disabled>
-           <Play className="w-4 h-4 mr-2" /> Simulate Lap (Soon)
+        <Button onClick={onStartSimulation} variant="secondary" className="w-full" disabled={!canSimulate}>
+           <Play className="w-4 h-4 mr-2" /> 
+           {isSimulating ? 'Simulating...' : 'Simulate Lap'}
         </Button>
 
       </CardContent>
     </Card>
   );
 }
+
+    
