@@ -7,14 +7,14 @@ import { v4 as uuidv4 } from 'uuid';
 
 export const AVAILABLE_SEGMENTS: SegmentDefinition[] = [
   { type: 'straight', label: 'Straight', baseTimeMs: 300 },
-  { type: 'corner', label: 'Corner', baseTimeMs: 700 }, 
+  { type: 'corner', label: 'Corner', baseTimeMs: 700 },
 ];
 
-export const CELL_SIZE = 30; 
-const GRID_COLS = 30; 
-const GRID_ROWS = 20; 
+export const CELL_SIZE = 30;
+const GRID_COLS = 30;
+const GRID_ROWS = 20;
 const LOCAL_STORAGE_TRACK_PREFIX = "apexSketcherTrack_";
-export const MIN_SEGMENTS_FOR_LOOP = 4; 
+export const MIN_SEGMENTS_FOR_LOOP = 4;
 
 
 export function useApexTrackSketcherLogic() {
@@ -33,9 +33,11 @@ export function useApexTrackSketcherLogic() {
 
   const animationFrameRef = useRef<number | null>(null);
   const lastFrameTimeRef = useRef<number>(performance.now());
-  const segmentEnterTimeRef = useRef<number>(0); 
-  const isSimulatingRef = useRef(isSimulating); 
-  const simulatedTimeRef = useRef(simulatedTime); 
+  const segmentEnterTimeRef = useRef<number>(0);
+  const isSimulatingRef = useRef(isSimulating);
+  const simulatedTimeRef = useRef(simulatedTime);
+  const previousCarPositionForRotationRef = useRef<{ x: number; y: number } | null>(null);
+
 
   useEffect(() => {
     isSimulatingRef.current = isSimulating;
@@ -57,7 +59,7 @@ export function useApexTrackSketcherLogic() {
   const handlePlaceSegment = useCallback((centerX: number, centerY: number) => {
     if (!selectedSegmentType || isSimulating) return;
 
-    const newSegmentX = centerX - CELL_SIZE / 2; 
+    const newSegmentX = centerX - CELL_SIZE / 2;
     const newSegmentY = centerY - CELL_SIZE / 2;
 
     const newSegment: PlacedSegment = {
@@ -67,12 +69,11 @@ export function useApexTrackSketcherLogic() {
       y: newSegmentY,
       rotation: currentRotation,
     };
-    
-    const proximityThreshold = CELL_SIZE / 2.5; 
+
     const existingSegmentIndex = placedSegments.findIndex(seg => {
         const segCenterX = seg.x + CELL_SIZE / 2;
         const segCenterY = seg.y + CELL_SIZE / 2;
-        return Math.abs(segCenterX - centerX) < proximityThreshold && Math.abs(segCenterY - centerY) < proximityThreshold;
+        return Math.abs(segCenterX - centerX) < CELL_SIZE / 2.5 && Math.abs(segCenterY - centerY) < CELL_SIZE / 2.5;
     });
 
     if (existingSegmentIndex !== -1) {
@@ -84,8 +85,8 @@ export function useApexTrackSketcherLogic() {
     } else {
       setPlacedSegments(prevSegments => [...prevSegments, newSegment]);
     }
-    setAnalysisResult(null); 
-    setSimulatedTime(0); // Reset simulation time if track changes
+    setAnalysisResult(null);
+    setSimulatedTime(0);
   }, [selectedSegmentType, currentRotation, placedSegments, isSimulating]);
 
   const handleRemoveSegment = useCallback((clickX: number, clickY: number) => {
@@ -96,9 +97,11 @@ export function useApexTrackSketcherLogic() {
         const segCenterX = segment.x + CELL_SIZE / 2;
         const segCenterY = segment.y + CELL_SIZE / 2;
 
+        // Translate click point to be relative to segment's center
         const relX = clickX - segCenterX;
         const relY = clickY - segCenterY;
 
+        // Apply inverse rotation to the click point
         const angleRad = -(segment.rotation * Math.PI) / 180;
         const cosAngle = Math.cos(angleRad);
         const sinAngle = Math.sin(angleRad);
@@ -106,6 +109,7 @@ export function useApexTrackSketcherLogic() {
         const rotatedRelX = relX * cosAngle - relY * sinAngle;
         const rotatedRelY = relX * sinAngle + relY * cosAngle;
 
+        // Check if the un-rotated click point is within the segment's un-rotated bounding box
         if (
             rotatedRelX >= -CELL_SIZE / 2 &&
             rotatedRelX <= CELL_SIZE / 2 &&
@@ -113,19 +117,19 @@ export function useApexTrackSketcherLogic() {
             rotatedRelY <= CELL_SIZE / 2
         ) {
             segmentToRemoveId = segment.id;
-            break; 
+            break;
         }
     }
 
     if (segmentToRemoveId) {
       setPlacedSegments(prevSegments => prevSegments.filter(seg => seg.id !== segmentToRemoveId));
-      setAnalysisResult(null); 
-      setSimulatedTime(0); // Reset simulation time if track changes
+      setAnalysisResult(null);
+      setSimulatedTime(0);
     }
   }, [placedSegments, isSimulating]);
 
   const handleClearCanvas = useCallback(() => {
-    if (isSimulating) setIsSimulating(false); 
+    if (isSimulating) setIsSimulating(false);
     setPlacedSegments([]);
     setAnalysisResult(null);
     setSimulatedTime(0);
@@ -150,10 +154,10 @@ export function useApexTrackSketcherLogic() {
       return;
     }
     setIsAnalyzing(true);
-    setAnalysisResult(null); 
-    setSimulatedTime(0);    
+    setAnalysisResult(null);
+    setSimulatedTime(0);
 
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate processing
 
     const numStraights = placedSegments.filter(s => s.type === 'straight').length;
     const numCorners = placedSegments.filter(s => s.type === 'corner').length;
@@ -184,7 +188,7 @@ export function useApexTrackSketcherLogic() {
         estimatedLapTime: formatTime(totalCalculatedTimeMs),
         trackCharacteristics: characteristics,
         designFeedback: feedback,
-        isClosedLoop: true, 
+        isClosedLoop: true,
       });
     }
     setIsAnalyzing(false);
@@ -193,22 +197,22 @@ export function useApexTrackSketcherLogic() {
 
   const getSegmentVisualEndpoints = useCallback((segment: PlacedSegment) => {
     const { type, x, y, rotation } = segment;
-    const segTopLeftX = x; 
+    const segTopLeftX = x;
     const segTopLeftY = y;
 
     let localEntryPointX = 0, localEntryPointY = 0, localExitPointX = 0, localExitPointY = 0;
 
     switch (type) {
       case 'straight':
-        localEntryPointX = 0;            
+        localEntryPointX = 0;
         localEntryPointY = CELL_SIZE / 2;
-        localExitPointX = CELL_SIZE;     
+        localExitPointX = CELL_SIZE;
         localExitPointY = CELL_SIZE / 2;
         break;
-      case 'corner': 
-        localEntryPointX = 0;            
+      case 'corner':
+        localEntryPointX = 0;
         localEntryPointY = CELL_SIZE / 2;
-        localExitPointX = CELL_SIZE / 2; 
+        localExitPointX = CELL_SIZE / 2;
         localExitPointY = 0;
         break;
     }
@@ -217,8 +221,8 @@ export function useApexTrackSketcherLogic() {
     const segmentLocalCenterY = CELL_SIZE / 2;
 
     const pointsToRotate = [
-      { x: localEntryPointX, y: localEntryPointY }, 
-      { x: localExitPointX, y: localExitPointY }, 
+      { x: localEntryPointX, y: localEntryPointY },
+      { x: localExitPointX, y: localExitPointY },
     ];
 
     const rotatedPoints = pointsToRotate.map(point => {
@@ -249,47 +253,51 @@ export function useApexTrackSketcherLogic() {
       alert("Please analyze the track and ensure it's considered a closed loop before simulating.");
       return;
     }
-     if (placedSegments.length < MIN_SEGMENTS_FOR_LOOP) {
+    if (placedSegments.length < MIN_SEGMENTS_FOR_LOOP) {
       alert(`Track must have at least ${MIN_SEGMENTS_FOR_LOOP} segments to simulate.`);
       return;
     }
-    if (isSimulating) return; 
+    if (isSimulating) return;
 
     setIsSimulating(true);
     setSimulatedTime(0);
     simulatedTimeRef.current = 0;
     setCurrentSimSegmentIndex(0);
-    segmentEnterTimeRef.current = 0; 
+    segmentEnterTimeRef.current = 0;
 
     const firstSegment = placedSegments[0];
     if (firstSegment) {
       const { entryPoint } = getSegmentVisualEndpoints(firstSegment);
       setSimulationCarPosition(entryPoint);
-      setSimulationCarRotation(firstSegment.rotation); 
+      setSimulationCarRotation(firstSegment.rotation); // Initial rotation based on first segment
+      previousCarPositionForRotationRef.current = { ...entryPoint }; // Initialize for rotation calc
     } else {
-      setIsSimulating(false); 
+      setIsSimulating(false);
       return;
     }
     lastFrameTimeRef.current = performance.now();
   }, [analysisResult, isAnalyzing, isSimulating, placedSegments, getSegmentVisualEndpoints]);
 
   useEffect(() => {
-    if (!isSimulating || currentSimSegmentIndex === null || currentSimSegmentIndex >= placedSegments.length) {
-      if (isSimulating) { 
-          setIsSimulating(false);
-      }
-      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-      return;
+    if (!isSimulating) {
+        if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+        previousCarPositionForRotationRef.current = null; // Reset on simulation stop
+        return;
+    }
+    if (currentSimSegmentIndex === null || currentSimSegmentIndex >= placedSegments.length) {
+        setIsSimulating(false);
+        if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+        return;
     }
 
     const animate = (timestamp: number) => {
-      if (!isSimulatingRef.current) { 
+      if (!isSimulatingRef.current) {
         if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         return;
       }
 
-      const currentSegment = placedSegments[currentSimSegmentIndex];
-      if (!currentSegment) { 
+      const currentSegment = placedSegments[currentSimSegmentIndex!];
+      if (!currentSegment) {
         setIsSimulating(false);
         if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         return;
@@ -300,82 +308,93 @@ export function useApexTrackSketcherLogic() {
 
       const newSimulatedTotalTime = simulatedTimeRef.current + deltaTime;
       simulatedTimeRef.current = newSimulatedTotalTime;
-      setSimulatedTime(newSimulatedTotalTime); 
+      setSimulatedTime(newSimulatedTotalTime);
 
       const segmentDef = AVAILABLE_SEGMENTS.find(s => s.type === currentSegment.type);
-      const segmentDuration = segmentDef ? segmentDef.baseTimeMs : 1000; 
+      const segmentDuration = segmentDef ? segmentDef.baseTimeMs : 1000;
 
       const elapsedInSegment = newSimulatedTotalTime - segmentEnterTimeRef.current;
       let progressRatio = Math.min(1, elapsedInSegment / segmentDuration);
 
       let newCarX, newCarY;
-      let newCarRot = currentSegment.rotation; 
+      let newCarRot = simulationCarRotation; // Default to current rotation
 
       const { entryPoint, exitPoint } = getSegmentVisualEndpoints(currentSegment);
 
       if (currentSegment.type === 'straight') {
         newCarX = entryPoint.x + (exitPoint.x - entryPoint.x) * progressRatio;
         newCarY = entryPoint.y + (exitPoint.y - entryPoint.y) * progressRatio;
-        newCarRot = currentSegment.rotation;
-      } else { 
+      } else { // Corner
         const segmentTopLeftX = currentSegment.x;
         const segmentTopLeftY = currentSegment.y;
         const radius = CELL_SIZE / 2;
-        
+
         const arcCenterXLocal = radius;
         const arcCenterYLocal = radius;
-        const startAngleRad = Math.PI; 
-        const endAngleRad = Math.PI / 2;   
-        
+        const startAngleRad = Math.PI; // Local angle for the arc starting at the left mid-point
+        const endAngleRad = Math.PI / 2;   // Local angle for the arc ending at the top mid-point
+
         const currentAngleRad = startAngleRad + (endAngleRad - startAngleRad) * progressRatio;
-        
+
         const carX_on_arc_local_to_center = radius * Math.cos(currentAngleRad);
         const carY_on_arc_local_to_center = radius * Math.sin(currentAngleRad);
-        
+
         const carX_local_to_segment_origin = arcCenterXLocal + carX_on_arc_local_to_center;
         const carY_local_to_segment_origin = arcCenterYLocal + carY_on_arc_local_to_center;
-        
+
         const localRelToSegCenter_X = carX_local_to_segment_origin - (CELL_SIZE / 2);
         const localRelToSegCenter_Y = carY_local_to_segment_origin - (CELL_SIZE / 2);
-        
+
         const segRotRad = (currentSegment.rotation * Math.PI) / 180;
         const cosSegRot = Math.cos(segRotRad);
         const sinSegRot = Math.sin(segRotRad);
-        
+
         const rotatedRelX = localRelToSegCenter_X * cosSegRot - localRelToSegCenter_Y * sinSegRot;
         const rotatedRelY = localRelToSegCenter_X * sinSegRot + localRelToSegCenter_Y * cosSegRot;
-        
+
         newCarX = rotatedRelX + (CELL_SIZE / 2) + segmentTopLeftX;
         newCarY = rotatedRelY + (CELL_SIZE / 2) + segmentTopLeftY;
-        
-        const tangentAngleRad = currentAngleRad - (Math.PI / 2); 
-        newCarRot = (tangentAngleRad * 180 / Math.PI) + currentSegment.rotation;
       }
 
+      // Update rotation based on movement direction
+      const prevPosForRot = previousCarPositionForRotationRef.current;
+      if (prevPosForRot) {
+          const dx = newCarX - prevPosForRot.x;
+          const dy = newCarY - prevPosForRot.y;
+          if (Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001) { // Avoid atan2(0,0) and ensure movement
+              const angleRad = Math.atan2(dy, dx);
+              newCarRot = (angleRad * 180) / Math.PI;
+          }
+      }
+      setSimulationCarRotation(newCarRot % 360);
       setSimulationCarPosition({ x: newCarX, y: newCarY });
-      setSimulationCarRotation(newCarRot);
+      previousCarPositionForRotationRef.current = { x: newCarX, y: newCarY };
+
 
       if (progressRatio >= 1) {
-        const nextSimSegmentIndex = currentSimSegmentIndex + 1;
+        const nextSimSegmentIndex = currentSimSegmentIndex! + 1;
+        // Store the exit point of the current segment before moving to the next
+        const currentSegmentExitPoint = getSegmentVisualEndpoints(currentSegment).exitPoint;
+        previousCarPositionForRotationRef.current = { ...currentSegmentExitPoint }; // Prime for next segment entry rotation
+
         if (nextSimSegmentIndex < placedSegments.length) {
-          segmentEnterTimeRef.current = newSimulatedTotalTime; 
+          segmentEnterTimeRef.current = newSimulatedTotalTime;
           setCurrentSimSegmentIndex(nextSimSegmentIndex);
-          
+
           const nextSegment = placedSegments[nextSimSegmentIndex];
           const { entryPoint: nextEntryPoint } = getSegmentVisualEndpoints(nextSegment);
-          setSimulationCarPosition(nextEntryPoint); 
-          setSimulationCarRotation(nextSegment.rotation); 
-        } else { 
+          setSimulationCarPosition(nextEntryPoint); // Snap to start of next segment
+          // Initial rotation for the next segment will be calculated in the next frame
+        } else {
           setIsSimulating(false);
-          const { exitPoint: finalExitPoint } = getSegmentVisualEndpoints(currentSegment);
-          setSimulationCarPosition(finalExitPoint);
+          setSimulationCarPosition(exitPoint); // Ensure car is at the very end
         }
       }
-      
-      if (isSimulatingRef.current && (currentSimSegmentIndex < placedSegments.length -1 || (currentSimSegmentIndex === placedSegments.length -1 && progressRatio < 1)) ) {
+
+      if (isSimulatingRef.current && (currentSimSegmentIndex! < placedSegments.length -1 || (currentSimSegmentIndex === placedSegments.length -1 && progressRatio < 1)) ) {
         animationFrameRef.current = requestAnimationFrame(animate);
-      } else if (isSimulatingRef.current) { 
-        setIsSimulating(false); 
+      } else if (isSimulatingRef.current) {
+        setIsSimulating(false);
       }
     };
 
@@ -386,7 +405,7 @@ export function useApexTrackSketcherLogic() {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isSimulating, currentSimSegmentIndex, placedSegments, getSegmentVisualEndpoints]);
+  }, [isSimulating, currentSimSegmentIndex, placedSegments, getSegmentVisualEndpoints, simulationCarRotation]);
 
 
   const handleSaveTrack = useCallback(() => {
@@ -412,8 +431,8 @@ export function useApexTrackSketcherLogic() {
         const trackLayout: TrackLayout = JSON.parse(savedTrackJSON);
         setPlacedSegments(trackLayout.placedSegments || []);
         setTrackName(trackLayout.trackName || nameToLoad);
-        setAnalysisResult(null); 
-        setSimulatedTime(0);    
+        setAnalysisResult(null);
+        setSimulatedTime(0);
         alert(`Track "${trackLayout.trackName || nameToLoad}" loaded!`);
       } catch (e) {
         alert("Failed to load track. Data might be corrupted.");
@@ -445,8 +464,8 @@ export function useApexTrackSketcherLogic() {
     setTrackName,
     analysisResult,
     isAnalyzing,
-    GRID_COLS, 
-    GRID_ROWS,  
+    GRID_COLS,
+    GRID_ROWS,
     CELL_SIZE,
     availableSegmentTypes: AVAILABLE_SEGMENTS,
     handleSelectSegmentType,
@@ -458,7 +477,7 @@ export function useApexTrackSketcherLogic() {
     handleSaveTrack,
     handleLoadTrack,
     getSavedTrackNames,
-    
+
     isSimulating,
     simulationCarPosition,
     simulationCarRotation,
