@@ -10,7 +10,8 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit'; // Genkit re-exports z from zod
-import { TrackAnalysisInputSchema, TrackAnalysisOutputSchema, type TrackAnalysisInput, type TrackAnalysisOutput } from '@/lib/types';
+import type { TrackAnalysisInput, TrackAnalysisOutput} from '@/lib/types';
+import { TrackAnalysisInputSchema, TrackAnalysisOutputSchema } from '@/lib/types';
 
 
 const F1QueryInputSchema = z.object({
@@ -36,16 +37,19 @@ Answer the following user query about Formula 1 comprehensively and accurately.
 If the question is ambiguous, provide the most likely interpretation.
 If the question is outside of F1 knowledge, state that politely.
 
+Start your response with a clear, bolded title relevant to the user's query (e.g., *Driver Profile: Fernando Alonso* or *Circuit Overview: Suzuka*).
+
 Format your answer for readability:
 - Use double newlines to separate paragraphs.
-- For lists, start each item on a new line with an asterisk and a space (e.g., "* List item").
-- You can use asterisks for bolding (e.g., *Important Term*).
+- For lists of facts or statistics (like career details, team history, etc.), use a clear key-value format on separate lines (e.g., "Full Name: Fernando Alonso Díaz").
+- For more general lists, start each item on a new line with an asterisk and a space (e.g., "* List item").
+- You can use asterisks for bolding other important terms (e.g., *World Championships*).
 
 IMPORTANT: Provide only the answer to the user's query. Do not ask follow-up questions or try to extend the conversation. For example, do not ask "Is there anything else I can help you with?".
 
 User Query: {{{userQuery}}}
 
-Provide your answer.`,
+Provide your answer, starting with the title.`,
 });
 
 const f1QueryFlow = ai.defineFlow(
