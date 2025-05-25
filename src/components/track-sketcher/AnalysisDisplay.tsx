@@ -4,7 +4,7 @@
 import type { TrackAnalysisOutput } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Lightbulb, Clock, ListChecks } from 'lucide-react';
+import { Lightbulb, Clock, ListChecks, CircleCheck, CircleAlert } from 'lucide-react';
 
 interface AnalysisDisplayProps {
   analysisResult: TrackAnalysisOutput | null;
@@ -17,7 +17,7 @@ export function AnalysisDisplay({ analysisResult, isAnalyzing }: AnalysisDisplay
       <Card className="w-full shadow-lg">
         <CardHeader>
           <CardTitle className="text-xl">Track Analysis</CardTitle>
-          <CardDescription>AI is reviewing your circuit...</CardDescription>
+          <CardDescription>Calculating track properties...</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Skeleton className="h-6 w-3/4" />
@@ -37,12 +37,14 @@ export function AnalysisDisplay({ analysisResult, isAnalyzing }: AnalysisDisplay
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Design your track and click "Analyze Track" to get AI-powered insights and lap time estimations.
+            Design your track and click "Analyze Track" to get calculated insights and lap time estimations.
           </p>
         </CardContent>
       </Card>
     );
   }
+
+  const isLapTimeAvailable = analysisResult.estimatedLapTime && !analysisResult.estimatedLapTime.toLowerCase().includes("n/a");
 
   return (
     <Card className="w-full shadow-lg">
@@ -54,30 +56,55 @@ export function AnalysisDisplay({ analysisResult, isAnalyzing }: AnalysisDisplay
       <CardContent className="space-y-4">
         <div>
           <h4 className="font-semibold text-md flex items-center mb-1">
-            <Clock className="w-4 h-4 mr-2 text-primary" /> Estimated Lap Time:
+            <Clock className="w-4 h-4 mr-2 text-primary" /> Calculated Lap Time:
           </h4>
-          <p className="text-2xl font-bold text-primary">{analysisResult.estimatedLapTime}</p>
-        </div>
-        <div>
-          <h4 className="font-semibold text-md flex items-center mb-1">
-            <ListChecks className="w-4 h-4 mr-2" /> Characteristics:
-          </h4>
-          <ul className="list-disc list-inside text-sm space-y-1 text-muted-foreground">
-            {analysisResult.trackCharacteristics.map((char, index) => (
-              <li key={index}>{char}</li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <h4 className="font-semibold text-md mb-1">Design Feedback:</h4>
-          <p className="text-sm text-muted-foreground italic p-3 bg-muted/50 rounded-md">
-            "{analysisResult.designFeedback}"
+          <p className={`text-2xl font-bold ${isLapTimeAvailable ? 'text-primary' : 'text-muted-foreground'}`}>
+            {analysisResult.estimatedLapTime}
           </p>
         </div>
+        
+        {analysisResult.isClosedLoop !== undefined && (
+          <div className="flex items-center text-sm">
+            {analysisResult.isClosedLoop ? (
+              <>
+                <CircleCheck className="w-4 h-4 mr-2 text-green-500" />
+                <span>Track considered a closed loop (basic check).</span>
+              </>
+            ) : (
+              <>
+                <CircleAlert className="w-4 h-4 mr-2 text-yellow-500" />
+                <span>Track may not be a closed loop or is too short.</span>
+              </>
+            )}
+          </div>
+        )}
+
+        {analysisResult.trackCharacteristics && analysisResult.trackCharacteristics.length > 0 && (
+          <div>
+            <h4 className="font-semibold text-md flex items-center mb-1">
+              <ListChecks className="w-4 h-4 mr-2" /> Characteristics:
+            </h4>
+            <ul className="list-disc list-inside text-sm space-y-1 text-muted-foreground">
+              {analysisResult.trackCharacteristics.map((char, index) => (
+                <li key={index}>{char}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        
+        {analysisResult.designFeedback && (
+          <div>
+            <h4 className="font-semibold text-md mb-1">Feedback:</h4>
+            <p className="text-sm text-muted-foreground italic p-3 bg-muted/50 rounded-md">
+              "{analysisResult.designFeedback}"
+            </p>
+          </div>
+        )}
+
       </CardContent>
       <CardFooter>
         <p className="text-xs text-muted-foreground">
-          Note: Lap times and analysis are AI-generated estimations and may not reflect real-world physics perfectly.
+          Note: Lap times are calculated based on segment properties. Track closure check is basic.
         </p>
       </CardFooter>
     </Card>

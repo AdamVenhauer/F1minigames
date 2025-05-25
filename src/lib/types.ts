@@ -75,12 +75,13 @@ export type ReflexTilesGameState =
   | "finished";
 
 // Types for Apex Track Sketcher
-export type SegmentType = 'straight' | 'corner' | 'chicane_left' | 'chicane_right'; // Add more as needed
+export type SegmentType = 'straight' | 'corner'; // 'chicane_left', 'chicane_right' removed for simplicity now
 export type Rotation = 0 | 90 | 180 | 270;
 
 export interface SegmentDefinition {
   type: SegmentType;
   label: string;
+  baseTimeMs: number; // Time to traverse this segment type
   // icon?: React.ReactNode; // For future use
 }
 
@@ -97,7 +98,7 @@ export interface TrackLayout {
   placedSegments: PlacedSegment[];
 }
 
-// Zod Schemas for Track Analysis (moved from analyze-track-flow.ts)
+// Zod Schemas for Track Analysis (no longer for AI, but useful for structure)
 export const TrackAnalysisInputSchema = z.object({
   trackName: z.string().optional().describe("The name of the track being analyzed."),
   numStraights: z.number().int().min(0).describe("The number of straight segments in the track."),
@@ -107,8 +108,9 @@ export const TrackAnalysisInputSchema = z.object({
 export type TrackAnalysisInput = z.infer<typeof TrackAnalysisInputSchema>;
 
 export const TrackAnalysisOutputSchema = z.object({
-  estimatedLapTime: z.string().describe("The estimated lap time in M:SS.mmm format (e.g., 1:32.456)."),
-  trackCharacteristics: z.array(z.string()).describe("A short list (3-5 bullet points) of the main characteristics of this track."),
-  designFeedback: z.string().describe("A brief paragraph of design feedback, highlighting interesting aspects or potential areas for improvement from a racing perspective."),
+  estimatedLapTime: z.string().describe("The calculated lap time in M:SS.mmm format (e.g., 1:32.456)."),
+  trackCharacteristics: z.array(z.string()).describe("A short list of the main characteristics of this track."),
+  designFeedback: z.string().describe("A brief paragraph of feedback on the track's design or closure status."),
+  isClosedLoop: z.boolean().optional().describe("Whether the track is considered a closed loop (basic check).")
 });
 export type TrackAnalysisOutput = z.infer<typeof TrackAnalysisOutputSchema>;

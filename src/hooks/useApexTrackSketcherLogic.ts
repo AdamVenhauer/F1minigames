@@ -3,20 +3,19 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import type { SegmentType, PlacedSegment, Rotation, SegmentDefinition, TrackLayout, TrackAnalysisInput, TrackAnalysisOutput } from '@/lib/types';
-import { analyzeTrackFlow } from '@/ai/flows/analyze-track-flow'; // Ensuring this is the alias path
+// Removed import for analyzeTrackFlow as AI is no longer used for this
 import { v4 as uuidv4 } from 'uuid';
 
 export const AVAILABLE_SEGMENTS: SegmentDefinition[] = [
-  { type: 'straight', label: 'Straight' },
-  { type: 'corner', label: 'Corner' },
-  // Future segment types like 'chicane_left', 'chicane_right' can be added here
+  { type: 'straight', label: 'Straight', baseTimeMs: 300 },
+  { type: 'corner', label: 'Corner', baseTimeMs: 700 },
 ];
 
-export const CELL_SIZE = 30; // Visual size of a grid cell and base segment size
-const GRID_COLS = 30; // Number of columns in the grid
-const GRID_ROWS = 20; // Number of rows in the grid
+export const CELL_SIZE = 30;
+const GRID_COLS = 30;
+const GRID_ROWS = 20;
 const LOCAL_STORAGE_TRACK_PREFIX = "apexSketcherTrack_";
-
+const MIN_SEGMENTS_FOR_LOOP = 4; // Minimum segments for a track to be considered for lap time calculation
 
 export function useApexTrackSketcherLogic() {
   const [placedSegments, setPlacedSegments] = useState<PlacedSegment[]>([]);
@@ -40,8 +39,8 @@ export function useApexTrackSketcherLogic() {
     const newSegment: PlacedSegment = {
       id: uuidv4(),
       type: selectedSegmentType,
-      x: centerX - CELL_SIZE / 2, // Store top-left based on center
-      y: centerY - CELL_SIZE / 2, // Store top-left based on center
+      x: centerX - CELL_SIZE / 2,
+      y: centerY - CELL_SIZE / 2,
       rotation: currentRotation,
     };
     
@@ -65,19 +64,15 @@ export function useApexTrackSketcherLogic() {
 
   const handleRemoveSegment = useCallback((clickX: number, clickY: number) => {
     let segmentToRemoveId: string | null = null;
-
     for (let i = placedSegments.length - 1; i >= 0; i--) {
       const segment = placedSegments[i];
       const segCenterX = segment.x + CELL_SIZE / 2;
       const segCenterY = segment.y + CELL_SIZE / 2;
-
       const relX = clickX - segCenterX;
       const relY = clickY - segCenterY;
-
       const angleRad = -(segment.rotation * Math.PI) / 180; 
       const cosAngle = Math.cos(angleRad);
       const sinAngle = Math.sin(angleRad);
-
       const rotatedRelX = relX * cosAngle - relY * sinAngle;
       const rotatedRelY = relX * sinAngle + relY * cosAngle;
 
@@ -91,7 +86,6 @@ export function useApexTrackSketcherLogic() {
         break; 
       }
     }
-
     if (segmentToRemoveId) {
       setPlacedSegments(prevSegments => prevSegments.filter(seg => seg.id !== segmentToRemoveId));
     }
@@ -102,43 +96,71 @@ export function useApexTrackSketcherLogic() {
     setAnalysisResult(null);
   }, []);
 
+  const formatTime = (ms: number): string => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    const milliseconds = ms % 1000;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`;
+  };
+
   const handleAnalyzeTrack = useCallback(async () => {
     if (placedSegments.length === 0) {
       alert("Please place some segments before analyzing.");
+      setAnalysisResult({
+        estimatedLapTime: "N/A",
+        trackCharacteristics: ["No segments placed."],
+        designFeedback: "Add segments to your track to enable analysis.",
+        isClosedLoop: false,
+      });
       return;
     }
     setIsAnalyzing(true);
     setAnalysisResult(null);
 
+    // Simulate processing delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     const numStraights = placedSegments.filter(s => s.type === 'straight').length;
     const numCorners = placedSegments.filter(s => s.type === 'corner').length;
 
-    const input: TrackAnalysisInput = {
-      trackName,
-      numStraights,
-      numCorners,
-      totalSegments: placedSegments.length,
-    };
-
-    try {
-      const result = await analyzeTrackFlow(input);
-      setAnalysisResult(result);
-    } catch (error: any) {
-      console.error("Error analyzing track:", error);
-      let errorMessage = "Failed to analyze track. See console for details.";
-       if (error.message && (error.message.includes('GEMINI_API_KEY') || error.message.includes('GOOGLE_API_KEY') || (error.cause as any)?.code === 'FAILED_PRECONDITION' || (error.cause as any)?.status === 'FAILED_PRECONDITION')) {
-        errorMessage = "AI Analysis Error: API Key is missing, invalid, or has insufficient quota. Please check your environment configuration and Google Cloud project.";
-      } else if (error.message) {
-        errorMessage = `AI Analysis Error: ${error.message}`;
+    let totalCalculatedTimeMs = 0;
+    placedSegments.forEach(segment => {
+      const definition = AVAILABLE_SEGMENTS.find(def => def.type === segment.type);
+      if (definition) {
+        totalCalculatedTimeMs += definition.baseTimeMs;
       }
+    });
+
+    // Basic closure check
+    const isPotentiallyClosed = placedSegments.length >= MIN_SEGMENTS_FOR_LOOP;
+    let characteristics: string[] = [];
+    let feedback: string;
+
+    if (!isPotentiallyClosed) {
+      feedback = `Track has ${placedSegments.length} segments. A minimum of ${MIN_SEGMENTS_FOR_LOOP} segments is suggested for a loop. Track closure validation not yet fully implemented.`;
+      characteristics.push(`Straights: ${numStraights}`, `Corners: ${numCorners}`);
       setAnalysisResult({
-        estimatedLapTime: "Error",
-        trackCharacteristics: [errorMessage],
-        designFeedback: "Could not complete analysis.",
+        estimatedLapTime: "N/A (Track too short or not closed)",
+        trackCharacteristics: characteristics,
+        designFeedback: feedback,
+        isClosedLoop: false,
       });
-    } finally {
-      setIsAnalyzing(false);
+    } else {
+      // For now, assume it's a loop if it meets minimum segments
+      // A proper connectivity check (graph traversal) would be needed here for true validation
+      feedback = "Track analysis based on segment count. Advanced closure validation is a future enhancement. Assuming a basic loop for lap time calculation.";
+      characteristics.push(`Straights: ${numStraights}`, `Corners: ${numCorners}`);
+      characteristics.push(`Track Composition: Balanced (Example Characteristic)`); // Example
+      
+      setAnalysisResult({
+        estimatedLapTime: formatTime(totalCalculatedTimeMs),
+        trackCharacteristics: characteristics,
+        designFeedback: feedback,
+        isClosedLoop: true, // Basic assumption
+      });
     }
+    setIsAnalyzing(false);
   }, [placedSegments, trackName]);
 
   const handleSaveTrack = useCallback(() => {
