@@ -3,7 +3,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import type { SegmentType, PlacedSegment, Rotation, SegmentDefinition, TrackLayout, TrackAnalysisInput, TrackAnalysisOutput } from '@/lib/types';
-import { analyzeTrackFlow } from '@/ai/flows/analyze-track-flow'; // Reverted to alias path
+import { analyzeTrackFlow } from '@/ai/flows/analyze-track-flow'; // Ensuring this is the alias path
 import { v4 as uuidv4 } from 'uuid';
 
 export const AVAILABLE_SEGMENTS: SegmentDefinition[] = [
@@ -45,9 +45,7 @@ export function useApexTrackSketcherLogic() {
       rotation: currentRotation,
     };
     
-    // Check if a segment already exists at these center coordinates (or very close by)
-    // This simplistic check might need refinement for overlapping segments if desired
-    const proximityThreshold = CELL_SIZE / 2.5; // How close centers need to be to be considered "same spot"
+    const proximityThreshold = CELL_SIZE / 2.5; 
     const existingSegmentIndex = placedSegments.findIndex(seg => {
         const segCenterX = seg.x + CELL_SIZE / 2;
         const segCenterY = seg.y + CELL_SIZE / 2;
@@ -55,14 +53,12 @@ export function useApexTrackSketcherLogic() {
     });
 
     if (existingSegmentIndex !== -1) {
-        // Replace existing segment
         setPlacedSegments(prevSegments => {
             const updatedSegments = [...prevSegments];
             updatedSegments[existingSegmentIndex] = newSegment;
             return updatedSegments;
         });
     } else {
-        // Add new segment
         setPlacedSegments(prevSegments => [...prevSegments, newSegment]);
     }
   }, [selectedSegmentType, currentRotation, placedSegments]);
@@ -70,25 +66,21 @@ export function useApexTrackSketcherLogic() {
   const handleRemoveSegment = useCallback((clickX: number, clickY: number) => {
     let segmentToRemoveId: string | null = null;
 
-    // Iterate in reverse to remove the top-most segment if overlapping
     for (let i = placedSegments.length - 1; i >= 0; i--) {
       const segment = placedSegments[i];
       const segCenterX = segment.x + CELL_SIZE / 2;
       const segCenterY = segment.y + CELL_SIZE / 2;
 
-      // Translate click point to be relative to the segment's center
       const relX = clickX - segCenterX;
       const relY = clickY - segCenterY;
 
-      // Inverse rotation: rotate the click point back by the segment's rotation
-      const angleRad = -(segment.rotation * Math.PI) / 180; // Negative angle for inverse
+      const angleRad = -(segment.rotation * Math.PI) / 180; 
       const cosAngle = Math.cos(angleRad);
       const sinAngle = Math.sin(angleRad);
 
       const rotatedRelX = relX * cosAngle - relY * sinAngle;
       const rotatedRelY = relX * sinAngle + relY * cosAngle;
 
-      // Check if the un-rotated click point is within the segment's un-rotated bounding box
       if (
         rotatedRelX >= -CELL_SIZE / 2 &&
         rotatedRelX <= CELL_SIZE / 2 &&
@@ -96,7 +88,7 @@ export function useApexTrackSketcherLogic() {
         rotatedRelY <= CELL_SIZE / 2
       ) {
         segmentToRemoveId = segment.id;
-        break; // Found the segment to remove
+        break; 
       }
     }
 
@@ -134,7 +126,7 @@ export function useApexTrackSketcherLogic() {
     } catch (error: any) {
       console.error("Error analyzing track:", error);
       let errorMessage = "Failed to analyze track. See console for details.";
-       if (error.message && (error.message.includes('GEMINI_API_KEY') || error.message.includes('GOOGLE_API_KEY') || error.code === 'FAILED_PRECONDITION')) {
+       if (error.message && (error.message.includes('GEMINI_API_KEY') || error.message.includes('GOOGLE_API_KEY') || (error.cause as any)?.code === 'FAILED_PRECONDITION' || (error.cause as any)?.status === 'FAILED_PRECONDITION')) {
         errorMessage = "AI Analysis Error: API Key is missing, invalid, or has insufficient quota. Please check your environment configuration and Google Cloud project.";
       } else if (error.message) {
         errorMessage = `AI Analysis Error: ${error.message}`;
@@ -204,9 +196,9 @@ export function useApexTrackSketcherLogic() {
     setTrackName,
     analysisResult,
     isAnalyzing,
-    GRID_COLS, // Export for canvas dimensions
-    GRID_ROWS,  // Export for canvas dimensions
-    CELL_SIZE,  // Export for canvas cell size reference
+    GRID_COLS, 
+    GRID_ROWS,  
+    CELL_SIZE,  
     availableSegmentTypes: AVAILABLE_SEGMENTS,
     handleSelectSegmentType,
     handleRotatePreviewSegment,

@@ -1,4 +1,6 @@
 
+import { z } from 'zod';
+
 export interface ScoreEntry {
   id: string;
   nickname: string;
@@ -85,24 +87,28 @@ export interface SegmentDefinition {
 export interface PlacedSegment {
   id: string;
   type: SegmentType;
-  x: number; // Grid column index
-  y: number; // Grid row index
+  x: number; // Top-left x coordinate on canvas
+  y: number; // Top-left y coordinate on canvas
   rotation: Rotation;
 }
 
 export interface TrackLayout {
+  trackName: string;
   placedSegments: PlacedSegment[];
-  // Potentially add other metadata like name, description later
 }
 
-export interface TrackAnalysisInput {
-  segments: Array<{ type: SegmentType; length?: number; radius?: string }>; // Simplified for AI
-  totalLength?: number;
-  turns?: number;
-}
+// Zod Schemas for Track Analysis (moved from analyze-track-flow.ts)
+export const TrackAnalysisInputSchema = z.object({
+  trackName: z.string().optional().describe("The name of the track being analyzed."),
+  numStraights: z.number().int().min(0).describe("The number of straight segments in the track."),
+  numCorners: z.number().int().min(0).describe("The number of corner segments in the track."),
+  totalSegments: z.number().int().min(0).describe("The total number of segments in the track."),
+});
+export type TrackAnalysisInput = z.infer<typeof TrackAnalysisInputSchema>;
 
-export interface TrackAnalysisOutput {
-  estimatedLapTime: string;
-  trackCharacteristics: string[];
-  designFeedback: string;
-}
+export const TrackAnalysisOutputSchema = z.object({
+  estimatedLapTime: z.string().describe("The estimated lap time in M:SS.mmm format (e.g., 1:32.456)."),
+  trackCharacteristics: z.array(z.string()).describe("A short list (3-5 bullet points) of the main characteristics of this track."),
+  designFeedback: z.string().describe("A brief paragraph of design feedback, highlighting interesting aspects or potential areas for improvement from a racing perspective."),
+});
+export type TrackAnalysisOutput = z.infer<typeof TrackAnalysisOutputSchema>;
