@@ -41,6 +41,8 @@ Format your answer for readability:
 - For lists, start each item on a new line with an asterisk and a space (e.g., "* List item").
 - You can use asterisks for bolding (e.g., *Important Term*).
 
+IMPORTANT: Provide only the answer to the user's query. Do not ask follow-up questions or try to extend the conversation. For example, do not ask "Is there anything else I can help you with?".
+
 User Query: {{{userQuery}}}
 
 Provide your answer.`,
@@ -70,3 +72,4 @@ const f1QueryFlow = ai.defineFlow(
     }
   }
 );
+
