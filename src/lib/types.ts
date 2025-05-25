@@ -72,3 +72,37 @@ export type ReflexTilesGameState =
   | "playing"
   | "finished";
 
+// Types for Apex Track Sketcher
+export type SegmentType = 'straight' | 'corner' | 'chicane_left' | 'chicane_right'; // Add more as needed
+export type Rotation = 0 | 90 | 180 | 270;
+
+export interface SegmentDefinition {
+  type: SegmentType;
+  label: string;
+  // icon?: React.ReactNode; // For future use
+}
+
+export interface PlacedSegment {
+  id: string;
+  type: SegmentType;
+  x: number; // Grid column index
+  y: number; // Grid row index
+  rotation: Rotation;
+}
+
+export interface TrackLayout {
+  placedSegments: PlacedSegment[];
+  // Potentially add other metadata like name, description later
+}
+
+export interface TrackAnalysisInput {
+  segments: Array<{ type: SegmentType; length?: number; radius?: string }>; // Simplified for AI
+  totalLength?: number;
+  turns?: number;
+}
+
+export interface TrackAnalysisOutput {
+  estimatedLapTime: string;
+  trackCharacteristics: string[];
+  designFeedback: string;
+}
