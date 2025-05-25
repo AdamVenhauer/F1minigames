@@ -29,8 +29,7 @@ const SegmentVisual = ({ segment, cellSize, isPreview }: { segment: PlacedSegmen
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    opacity: isPreview ? 0.5 : 1, // Made preview slightly transparent
-    // border: '1px dashed rgba(255,255,255,0.1)', // For visual debugging
+    opacity: isPreview ? 0.5 : 1,
   };
 
   const svgStyle: React.SVGAttributes<SVGSVGElement> = {
@@ -40,7 +39,8 @@ const SegmentVisual = ({ segment, cellSize, isPreview }: { segment: PlacedSegmen
   };
 
   const strokeColor = "hsl(var(--primary))";
-  const trackStrokeWidth = Math.max(4, cellSize / 3.5);
+  // Make stroke about 1/3 of cell size for better visibility and connection
+  const trackStrokeWidth = Math.max(4, cellSize / 3); 
   const radius = cellSize / 2;
 
   switch (segment.type) {
@@ -55,7 +55,8 @@ const SegmentVisual = ({ segment, cellSize, isPreview }: { segment: PlacedSegmen
               y2={radius}
               stroke={strokeColor}
               strokeWidth={trackStrokeWidth}
-              strokeLinecap="butt" // Changed from "round"
+              strokeLinecap="butt"
+              strokeLinejoin="round" // Use round joins for smoother appearance at segment ends
             />
           </svg>
         </div>
@@ -69,7 +70,8 @@ const SegmentVisual = ({ segment, cellSize, isPreview }: { segment: PlacedSegmen
               stroke={strokeColor}
               strokeWidth={trackStrokeWidth}
               fill="none"
-              strokeLinecap="butt" // Changed from "round"
+              strokeLinecap="butt" 
+              strokeLinejoin="round" // Use round joins for the arc itself and at segment ends
             />
           </svg>
         </div>
@@ -198,3 +200,6 @@ export function TrackCanvas({
     </div>
   );
 }
+
+
+    
