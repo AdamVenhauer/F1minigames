@@ -2,7 +2,7 @@
 "use client";
 
 import type { PlacedSegment, SegmentType, Rotation } from '@/lib/types';
-import React, { useRef } from 'react'; // Removed useEffect as it's not used
+import React, { useRef } from 'react';
 
 interface TrackCanvasProps {
   gridCols: number;
@@ -29,7 +29,7 @@ const SegmentVisual = ({ segment, cellSize, isPreview }: { segment: PlacedSegmen
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    opacity: isPreview ? 0.6 : 1,
+    opacity: isPreview ? 0.5 : 1, // Made preview slightly transparent
     // border: '1px dashed rgba(255,255,255,0.1)', // For visual debugging
   };
 
@@ -40,7 +40,7 @@ const SegmentVisual = ({ segment, cellSize, isPreview }: { segment: PlacedSegmen
   };
 
   const strokeColor = "hsl(var(--primary))";
-  const trackStrokeWidth = Math.max(4, cellSize / 3.5); // Increased thickness
+  const trackStrokeWidth = Math.max(4, cellSize / 3.5);
   const radius = cellSize / 2;
 
   switch (segment.type) {
@@ -55,7 +55,7 @@ const SegmentVisual = ({ segment, cellSize, isPreview }: { segment: PlacedSegmen
               y2={radius}
               stroke={strokeColor}
               strokeWidth={trackStrokeWidth}
-              strokeLinecap="round" // Added for smoother ends
+              strokeLinecap="butt" // Changed from "round"
             />
           </svg>
         </div>
@@ -69,7 +69,7 @@ const SegmentVisual = ({ segment, cellSize, isPreview }: { segment: PlacedSegmen
               stroke={strokeColor}
               strokeWidth={trackStrokeWidth}
               fill="none"
-              strokeLinecap="round" // Added for smoother ends and connections
+              strokeLinecap="butt" // Changed from "round"
             />
           </svg>
         </div>
@@ -154,7 +154,7 @@ export function TrackCanvas({
     <div
       ref={canvasRef}
       className="overflow-auto max-w-full max-h-[70vh] border rounded-md shadow-inner bg-background"
-      style={{ width: gridCols * cellSize + 2, height: gridRows * cellSize + 2 }}
+      style={{ width: gridCols * cellSize + 2, height: gridRows * cellSize + 2 }} // +2 for the border
     >
       <div 
         style={gridStyle} 
@@ -168,7 +168,7 @@ export function TrackCanvas({
         {Array.from({ length: gridRows * gridCols }).map((_, index) => (
           <div
             key={index}
-            className="border-r border-b border-[hsl(var(--border)/0.2)]"
+            className="border-r border-b border-[hsl(var(--border)/0.2)]" // Grid cell lines
             style={{
               gridColumnStart: (index % gridCols) + 1,
               gridRowStart: Math.floor(index / gridCols) + 1,
